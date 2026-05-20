@@ -36,3 +36,6 @@ PWA 配置和部署收尾，确保手机可安装、Docker 可一键启动。
 - [ ] 手机端布局正常：天列表可切换，活动时间线可滚动
 - [ ] 数据持久化：重启容器后数据不丢失（data volume）
 - [ ] iOS Safari 和 Android Chrome 均可正常使用
+
+---
+**Status:** done (2026-05-20)
