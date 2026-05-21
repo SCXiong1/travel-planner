@@ -48,12 +48,12 @@
             <label class="block text-sm font-medium text-gray-600 mb-1">目的地</label>
             <input v-model="form.destination" required class="w-full border rounded-lg px-3 py-2 text-gray-800" />
           </div>
-          <div class="flex gap-3 mb-4">
-            <div class="flex-1">
+          <div class="flex flex-col sm:flex-row gap-3 mb-4">
+            <div class="flex-1 min-w-0">
               <label class="block text-sm font-medium text-gray-600 mb-1">开始日期</label>
               <input v-model="form.start_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-gray-800" />
             </div>
-            <div class="flex-1">
+            <div class="flex-1 min-w-0">
               <label class="block text-sm font-medium text-gray-600 mb-1">结束日期</label>
               <input v-model="form.end_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-gray-800" />
             </div>

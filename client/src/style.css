@@ -6,3 +6,9 @@ body {
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
 }
+
+/* 防止原生 date/time input 在移动端溢出容器 */
+input[type="date"],
+input[type="time"] {
+  min-width: 0;
+}

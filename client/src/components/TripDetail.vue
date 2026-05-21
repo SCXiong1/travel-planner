@@ -96,12 +96,12 @@
                   <label class="block text-sm font-medium text-gray-600 mb-1">地点（可选）</label>
                   <input v-model="form.location" class="w-full border rounded-lg px-3 py-2 text-gray-800" />
                 </div>
-                <div class="flex gap-3 mb-3">
-                  <div class="flex-1">
+                <div class="flex flex-col sm:flex-row gap-3 mb-3">
+                  <div class="flex-1 min-w-0">
                     <label class="block text-sm font-medium text-gray-600 mb-1">开始</label>
                     <input v-model="form.start_time" type="time" class="w-full border rounded-lg px-3 py-2 text-gray-800" />
                   </div>
-                  <div class="flex-1">
+                  <div class="flex-1 min-w-0">
                     <label class="block text-sm font-medium text-gray-600 mb-1">结束</label>
                     <input v-model="form.end_time" type="time" class="w-full border rounded-lg px-3 py-2 text-gray-800" />
                   </div>
