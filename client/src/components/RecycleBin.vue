@@ -7,22 +7,37 @@
       <div v-if="items.length === 0" class="text-gray-300 text-center py-16">回收站为空</div>
       <div v-else class="space-y-2">
         <div v-for="item in items" :key="item.type + item.id"
-          class="bg-white rounded-lg p-3 border border-gray-100 flex items-center justify-between">
-          <div>
-            <span :class="item.type === 'activity' ? 'text-orange-500' : 'text-blue-500'"
-              class="text-xs px-2 py-0.5 rounded-full bg-gray-100 font-medium">
-              {{ item.type === 'activity' ? '活动' : '打包' }}
+          class="bg-white rounded-lg p-3 border border-gray-100">
+          <div class="flex items-center gap-2 mb-1">
+            <span :class="typeBadge(item.type)" class="text-xs px-2 py-0.5 rounded-full font-medium">
+              {{ typeLabel(item.type) }}
             </span>
-            <span class="font-medium text-gray-800 ml-2">{{ item.name }}</span>
-            <div class="text-xs text-gray-400 mt-0.5">删除于 {{ item.deleted_at }}</div>
+            <span class="font-medium text-gray-800 text-sm truncate">{{ item.name }}</span>
           </div>
-          <button @click="restore(item)"
-            class="px-3 py-1.5 text-sm text-blue-500 border border-blue-300 rounded-lg hover:bg-blue-50 transition">
-            恢复
-          </button>
+          <div class="text-xs text-gray-400 mb-1">{{ contextPath(item) }}</div>
+          <div class="text-xs text-gray-400 mb-3">删除于 {{ item.deleted_at }}</div>
+          <div class="flex gap-2">
+            <button @click="restore(item)"
+              class="flex-1 py-1.5 text-xs border border-blue-200 text-blue-500 rounded-lg hover:bg-blue-50 transition">
+              恢复
+            </button>
+            <button @click="promptPermanentDelete(item)"
+              class="flex-1 py-1.5 text-xs border border-red-200 text-red-400 rounded-lg hover:bg-red-50 transition">
+              永久删除
+            </button>
+          </div>
         </div>
       </div>
     </div>
+
+    <ConfirmDialog
+      v-if="permDeleteTarget"
+      title="永久删除"
+      :message="`确定永久删除「${permDeleteTarget.name}」？此操作不可撤销。`"
+      confirm-text="永久删除"
+      @confirm="confirmPermanentDelete"
+      @cancel="permDeleteTarget = null"
+    />
   </div>
 </template>
 
@@ -30,17 +45,65 @@
 import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { api } from "../api/client.js";
+import ConfirmDialog from "./ConfirmDialog.vue";
 
 const route = useRoute();
 const tripId = route.params.id;
 const items = ref([]);
+const permDeleteTarget = ref(null);
+
+const typeMap = {
+  trip: "旅行",
+  day: "天",
+  activity: "活动",
+  packing: "打包",
+};
+
+const badgeMap = {
+  trip: "bg-red-100 text-red-700",
+  day: "bg-blue-100 text-blue-700",
+  activity: "bg-orange-100 text-orange-700",
+  packing: "bg-green-100 text-green-700",
+};
+
+function typeLabel(t) {
+  return typeMap[t] || t;
+}
+
+function typeBadge(t) {
+  return badgeMap[t] || "";
+}
+
+function contextPath(item) {
+  const parts = [];
+  if (item.trip_title) parts.push(item.trip_title);
+  if (item.day_number) parts.push(`Day ${item.day_number}`);
+  if (item.day_date && item.type === "activity") parts.push(item.day_date);
+  return parts.join(" · ") || "";
+}
 
 async function load() {
   items.value = await api.get(`/trips/${tripId}/recycle-bin`);
 }
 
 async function restore(item) {
-  await api.post(`/recycle-bin/${item.type}/${item.id}/restore`);
+  try {
+    await api.post(`/recycle-bin/${item.type}/${item.id}/restore`);
+    await load();
+  } catch (e) {
+    alert(e.message || "恢复失败");
+    await load();
+  }
+}
+
+function promptPermanentDelete(item) {
+  permDeleteTarget.value = item;
+}
+
+async function confirmPermanentDelete() {
+  const item = permDeleteTarget.value;
+  permDeleteTarget.value = null;
+  await api.delete(`/recycle-bin/${item.type}/${item.id}`);
   await load();
 }
 
