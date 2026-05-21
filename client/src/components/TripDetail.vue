@@ -27,12 +27,22 @@
             :key="day.id"
             @click="selectDay(day.id)"
             :class="[
-              'px-3 py-2 rounded-lg cursor-pointer text-sm transition flex-shrink-0',
+              'px-3 py-2 rounded-lg cursor-pointer text-sm transition flex-shrink-0 flex items-center justify-between gap-1',
               selectedDay === day.id ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-100',
             ]"
           >
-            <div class="font-medium whitespace-nowrap">Day {{ day.day_number }}</div>
-            <div class="text-xs opacity-70 whitespace-nowrap">{{ day.date }}</div>
+            <div>
+              <div class="font-medium whitespace-nowrap">Day {{ day.day_number }}</div>
+              <div class="text-xs opacity-70 whitespace-nowrap">{{ day.date }}</div>
+            </div>
+            <ContextMenu @click.stop>
+              <template #default="{ close: closeMenu }">
+                <button
+                  @click="promptDeleteDay(day); closeMenu()"
+                  class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-50"
+                >删除</button>
+              </template>
+            </ContextMenu>
           </div>
         </div>
         <button @click="addDay"
@@ -48,9 +58,14 @@
           <div v-if="activities.length === 0" class="text-gray-300 text-center py-20">还没有活动，点击下方添加</div>
           <div v-else class="space-y-2">
             <div v-for="act in activities" :key="act.id"
-              class="bg-white rounded-lg p-3 border border-gray-100 shadow-sm cursor-pointer hover:shadow-md transition"
+              class="bg-white rounded-lg p-3 border border-gray-100 shadow-sm cursor-pointer hover:shadow-md transition relative"
               @click="openEditDialog(act)">
-              <div class="flex items-center gap-2">
+              <button
+                @click.stop="deleteActivity(act.id)"
+                class="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition"
+                title="删除活动"
+              >&times;</button>
+              <div class="flex items-center gap-2 pr-6">
                 <span :class="typeBadge(act.type)" class="text-xs px-2 py-0.5 rounded-full font-medium">
                   {{ typeLabel(act.type) }}
                 </span>
@@ -72,6 +87,15 @@
             class="mt-4 w-full py-2.5 bg-blue-500 text-white rounded-xl text-sm font-medium hover:bg-blue-600 active:scale-[0.98] transition">
             + 添加活动
           </button>
+
+          <!-- Day 删除确认 -->
+          <ConfirmDialog
+            v-if="deleteTargetDay"
+            title="删除天"
+            :message="`确定删除 Day ${deleteTargetDay.day_number}（${deleteTargetDay.date}）？该天下的活动也将不可见。`"
+            @confirm="confirmDeleteDay"
+            @cancel="deleteTargetDay = null"
+          />
 
           <!-- 活动编辑弹窗 -->
           <div v-if="showDialog" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="showDialog = false">
@@ -172,6 +196,8 @@ import { useRoute } from "vue-router";
 import { api } from "../api/client.js";
 import { useUser } from "../composables/useUser.js";
 import { useWebSocket } from "../composables/useWebSocket.js";
+import ContextMenu from "./ContextMenu.vue";
+import ConfirmDialog from "./ConfirmDialog.vue";
 
 const route = useRoute();
 const trip = ref({});
@@ -274,6 +300,29 @@ async function addDay() {
   const r = await api.post(`/trips/${route.params.id}/days`, { date: dateStr });
   await loadTrip();
   await selectDay(r.id);
+}
+
+const deleteTargetDay = ref(null);
+
+function promptDeleteDay(day) {
+  deleteTargetDay.value = day;
+}
+
+async function confirmDeleteDay() {
+  const day = deleteTargetDay.value;
+  deleteTargetDay.value = null;
+  await api.delete(`/trips/${route.params.id}/days/${day.id}`);
+  await loadTrip();
+  if (selectedDay.value === day.id) {
+    selectedDay.value = null;
+    activities.value = [];
+  }
+}
+
+async function deleteActivity(actId) {
+  if (!selectedDay.value) return;
+  await api.delete(`/trips/${route.params.id}/days/${selectedDay.value}/activities/${actId}`);
+  await selectDay(selectedDay.value);
 }
 
 onMounted(() => {

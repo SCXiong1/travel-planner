@@ -3,9 +3,15 @@
     <div class="max-w-2xl mx-auto">
       <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-bold text-gray-800">我的旅行</h1>
-        <span class="text-sm text-gray-400 bg-white px-3 py-1 rounded-full border">
-          {{ currentUser }}
-        </span>
+        <div class="flex items-center gap-2">
+          <button
+            @click="showDrawer = true"
+            class="text-sm text-gray-400 bg-white px-3 py-1 rounded-full border hover:bg-gray-100 transition"
+          >回收站</button>
+          <span class="text-sm text-gray-400 bg-white px-3 py-1 rounded-full border">
+            {{ currentUser }}
+          </span>
+        </div>
       </div>
 
       <!-- 空 -->
@@ -18,11 +24,21 @@
         <div
           v-for="trip in trips"
           :key="trip.id"
-          class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition"
+          class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition flex items-center"
           @click="openTrip(trip.id)"
         >
-          <h2 class="text-lg font-semibold text-gray-800">{{ trip.title }}</h2>
-          <p class="text-sm text-gray-500 mt-1">{{ trip.destination }} · {{ trip.start_date }} ~ {{ trip.end_date }}</p>
+          <div class="flex-1 min-w-0">
+            <h2 class="text-lg font-semibold text-gray-800 truncate">{{ trip.title }}</h2>
+            <p class="text-sm text-gray-500 mt-1">{{ trip.destination }} · {{ trip.start_date }} ~ {{ trip.end_date }}</p>
+          </div>
+          <ContextMenu @click.stop>
+            <template #default="{ close: closeMenu }">
+              <button
+                @click="promptDelete(trip); closeMenu()"
+                class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-50"
+              >删除</button>
+            </template>
+          </ContextMenu>
         </div>
       </div>
 
@@ -71,6 +87,21 @@
         </form>
       </div>
     </div>
+
+    <!-- 删除确认 -->
+    <ConfirmDialog
+      v-if="deleteTarget"
+      title="删除旅行"
+      :message="`确定删除「${deleteTarget.title}」？删除后可到回收站恢复。`"
+      @confirm="confirmDelete"
+      @cancel="deleteTarget = null"
+    />
+
+    <!-- 回收站抽屉 -->
+    <RecycleBinDrawer
+      v-if="showDrawer"
+      @close="showDrawer = false"
+    />
   </div>
 </template>
 
@@ -79,6 +110,9 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useUser } from "../composables/useUser.js";
 import { api } from "../api/client.js";
+import ContextMenu from "./ContextMenu.vue";
+import ConfirmDialog from "./ConfirmDialog.vue";
+import RecycleBinDrawer from "./RecycleBinDrawer.vue";
 
 const { current: currentUser } = useUser();
 const router = useRouter();
@@ -86,6 +120,8 @@ const router = useRouter();
 const trips = ref([]);
 const showDialog = ref(false);
 const editingTrip = ref(null);
+const deleteTarget = ref(null);
+const showDrawer = ref(false);
 
 const form = ref({ title: "", destination: "", start_date: "", end_date: "" });
 
@@ -111,6 +147,17 @@ async function submit() {
 
 function openTrip(id) {
   router.push(`/trips/${id}`);
+}
+
+function promptDelete(trip) {
+  deleteTarget.value = trip;
+}
+
+async function confirmDelete() {
+  const trip = deleteTarget.value;
+  deleteTarget.value = null;
+  await api.delete(`/trips/${trip.id}`);
+  await loadTrips();
 }
 
 onMounted(loadTrips);
