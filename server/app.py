@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from middleware.user import UserMiddleware
-from db.schema import init_db
+from db.schema import init_db, migrate
 from db.database import DB_PATH
 from ws.manager import ConnectionManager
 
@@ -21,6 +21,7 @@ def create_app() -> FastAPI:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     init_db(conn)
+    migrate(conn)
     app.state.db = conn
 
     # WebSocket 连接管理

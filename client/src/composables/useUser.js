@@ -14,5 +14,12 @@ export function useUser() {
     current.value = "";
   }
 
-  return { current, login, logout };
+  function switchUser() {
+    const next = current.value === "sd" ? "sg" : "sd";
+    saveUser(next);
+    current.value = next;
+    return next;
+  }
+
+  return { current, login, logout, switchUser };
 }

@@ -5,7 +5,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from fastapi import FastAPI, Request
 
-from db.schema import init_db
+from db.schema import init_db, migrate
 from middleware.user import UserMiddleware
 from ws.manager import ConnectionManager
 from routes.trips import router as trip_router
@@ -37,6 +37,7 @@ def db():
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
     init_db(conn)
+    migrate(conn)
     yield conn
     conn.close()
 
@@ -71,10 +72,13 @@ async def create_day(client, trip_id):
     return r.json()["id"]
 
 
-async def create_act(client, trip_id, day_id, **extra):
+async def create_act(client, trip_id, day_id, expense_items=None, **extra):
+    json = {"type": "eat", "name": "test", "start_time": "08:00", "end_time": "09:00", **extra}
+    if expense_items:
+        json["expense_items"] = expense_items
     r = await client.post(
         f"/api/trips/{trip_id}/days/{day_id}/activities",
-        json={"type": "eat", "name": "test", "start_time": "08:00", "end_time": "09:00", **extra},
+        json=json,
         headers=auth(),
     )
     return r.json()
@@ -101,7 +105,8 @@ async def test_settlement_equal_split(client):
     day_id = await create_day(client, trip_id)
 
     # sd 付了 ¥200，平分
-    await create_act(client, trip_id, day_id, expense_amount=200, expense_payer="sd", expense_split="equal")
+    await create_act(client, trip_id, day_id,
+                     expense_items=[{"amount": 200, "payer": "sd", "split": "equal"}])
 
     resp = await client.get(f"/api/trips/{trip_id}/settlement", headers=auth())
     data = resp.json()
@@ -121,7 +126,8 @@ async def test_settlement_assign_split(client):
     day_id = await create_day(client, trip_id)
 
     # sd 付 ¥300，归集到 sd 自己
-    await create_act(client, trip_id, day_id, expense_amount=300, expense_payer="sd", expense_split="assign")
+    await create_act(client, trip_id, day_id,
+                     expense_items=[{"amount": 300, "payer": "sd", "split": "assign"}])
 
     resp = await client.get(f"/api/trips/{trip_id}/settlement", headers=auth())
     data = resp.json()
@@ -138,9 +144,11 @@ async def test_settlement_mixed(client):
     day_id = await create_day(client, trip_id)
 
     # sd 付200 平分 (各100)
-    await create_act(client, trip_id, day_id, expense_amount=200, expense_payer="sd", expense_split="equal")
+    await create_act(client, trip_id, day_id,
+                     expense_items=[{"amount": 200, "payer": "sd", "split": "equal"}])
     # sg 付300 归集 (sg全承担300)
-    await create_act(client, trip_id, day_id, expense_amount=300, expense_payer="sg", expense_split="assign")
+    await create_act(client, trip_id, day_id,
+                     expense_items=[{"amount": 300, "payer": "sg", "split": "assign"}])
 
     resp = await client.get(f"/api/trips/{trip_id}/settlement", headers=auth())
     data = resp.json()
@@ -152,3 +160,27 @@ async def test_settlement_mixed(client):
     assert data["sg_owes"] == 400    # 平分100 + 归集300
     assert data["sd_balance"] == 100   # sd付200该出100，sg欠sd100
     assert data["sg_balance"] == -100
+
+
+@pytest.mark.anyio
+async def test_settlement_multi_expense_per_activity(client):
+    """一个活动含多笔开销，各自按不同 payer+split 参与结算"""
+    trip_id = await create_trip(client)
+    day_id = await create_day(client, trip_id)
+
+    # 一个活动两笔开销：sd 付 100 平分 + sg 付 200 归集
+    await create_act(client, trip_id, day_id, expense_items=[
+        {"amount": 100, "payer": "sd", "split": "equal"},
+        {"amount": 200, "payer": "sg", "split": "assign"},
+    ])
+
+    resp = await client.get(f"/api/trips/{trip_id}/settlement", headers=auth())
+    data = resp.json()
+
+    assert data["sd_paid"] == 100
+    assert data["sg_paid"] == 200
+    assert data["total"] == 300
+    assert data["sd_owes"] == 50     # 平分那笔的一半
+    assert data["sg_owes"] == 250    # 平分50 + 归集200
+    assert data["sd_balance"] == 50
+    assert data["sg_balance"] == -50

@@ -63,7 +63,8 @@ def test_activities_table_has_required_columns(conn):
     assert "expense_amount" in col_names
     assert "expense_payer" in col_names
     assert "expense_split" in col_names
-    assert "review" in col_names
+    assert "sd_review" in col_names
+    assert "sg_review" in col_names
     assert "sort_order" in col_names
     assert "deleted_at" in col_names
 

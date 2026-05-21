@@ -2,12 +2,12 @@
 
 
 def get_settlement(db, trip_id: int) -> dict:
-    acts = db.execute(
-        """SELECT expense_amount, expense_payer, expense_split
-           FROM activities a
+    rows = db.execute(
+        """SELECT ei.amount, ei.payer, ei.split
+           FROM expense_items ei
+           JOIN activities a ON ei.activity_id = a.id
            JOIN days d ON a.day_id = d.id
-           WHERE d.trip_id = ? AND a.deleted_at IS NULL AND d.deleted_at IS NULL
-             AND a.expense_amount IS NOT NULL AND a.expense_amount > 0""",
+           WHERE d.trip_id = ? AND a.deleted_at IS NULL AND d.deleted_at IS NULL""",
         (trip_id,),
     ).fetchall()
 
@@ -16,10 +16,10 @@ def get_settlement(db, trip_id: int) -> dict:
     sd_owes = 0
     sg_owes = 0
 
-    for act in acts:
-        amount = act["expense_amount"]
-        payer = act["expense_payer"]
-        split = act["expense_split"]
+    for row in rows:
+        amount = row["amount"]
+        payer = row["payer"]
+        split = row["split"]
 
         if payer == "sd":
             sd_paid += amount

@@ -5,7 +5,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from fastapi import FastAPI, Request
 
-from db.schema import init_db
+from db.schema import init_db, migrate
 from middleware.user import UserMiddleware
 from ws.manager import ConnectionManager
 from routes.trips import router as trip_router
@@ -35,6 +35,7 @@ def db():
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
     init_db(conn)
+    migrate(conn)
     yield conn
     conn.close()
 
@@ -191,7 +192,7 @@ async def test_reorder_activities(client):
 # ---------- extensions: expense, review, reservation ----------
 
 @pytest.mark.anyio
-async def test_create_activity_with_expense(client):
+async def test_create_activity_with_expense_items(client):
     trip_id = await create_trip(client)
     day_id = await create_day(client, trip_id)
 
@@ -199,15 +200,21 @@ async def test_create_activity_with_expense(client):
         f"/api/trips/{trip_id}/days/{day_id}/activities",
         json={
             "type": "eat", "name": "寿司大", "start_time": "08:00", "end_time": "09:00",
-            "expense_amount": 200, "expense_payer": "sd", "expense_split": "equal",
+            "expense_items": [
+                {"amount": 200, "payer": "sd", "split": "equal"},
+                {"amount": 50, "payer": "sg", "split": "assign"},
+            ],
         },
         headers=auth(),
     )
 
     data = response.json()
-    assert data["expense_amount"] == 200
-    assert data["expense_payer"] == "sd"
-    assert data["expense_split"] == "equal"
+    assert len(data["expense_items"]) == 2
+    assert data["expense_items"][0]["amount"] == 200
+    assert data["expense_items"][0]["payer"] == "sd"
+    assert data["expense_items"][1]["amount"] == 50
+    assert data["expense_items"][1]["payer"] == "sg"
+    assert data["expense_total"] == 250
 
 
 @pytest.mark.anyio
@@ -230,7 +237,7 @@ async def test_create_activity_with_reservation(client):
 
 
 @pytest.mark.anyio
-async def test_create_activity_with_review(client):
+async def test_create_activity_with_sd_review(client):
     trip_id = await create_trip(client)
     day_id = await create_day(client, trip_id)
 
@@ -238,13 +245,57 @@ async def test_create_activity_with_review(client):
         f"/api/trips/{trip_id}/days/{day_id}/activities",
         json={
             "type": "sight", "name": "浅草寺", "start_time": "10:00", "end_time": "12:00",
-            "review": "非常值得去, 人很多但值得排队",
+            "sd_review": "sd觉得很好",
         },
-        headers=auth(),
+        headers=auth("sd"),
     )
 
     data = response.json()
-    assert data["review"] == "非常值得去, 人很多但值得排队"
+    assert data["sd_review"] == "sd觉得很好"
+    assert data["sg_review"] == "" or data["sg_review"] is None
+
+
+@pytest.mark.anyio
+async def test_sd_cannot_write_sg_review(client):
+    trip_id = await create_trip(client)
+    day_id = await create_day(client, trip_id)
+
+    response = await client.post(
+        f"/api/trips/{trip_id}/days/{day_id}/activities",
+        json={
+            "type": "sight", "name": "浅草寺", "start_time": "10:00", "end_time": "12:00",
+            "sd_review": "sd的", "sg_review": "sd帮sg写的",
+        },
+        headers=auth("sd"),
+    )
+
+    data = response.json()
+    assert data["sd_review"] == "sd的"
+    assert not data["sg_review"]
+
+
+@pytest.mark.anyio
+async def test_sg_updates_own_review(client):
+    trip_id = await create_trip(client)
+    day_id = await create_day(client, trip_id)
+    act_id = (await client.post(
+        f"/api/trips/{trip_id}/days/{day_id}/activities",
+        json={
+            "type": "sight", "name": "浅草寺", "start_time": "10:00", "end_time": "12:00",
+            "sd_review": "sd觉得好",
+        },
+        headers=auth("sd"),
+    )).json()["id"]
+
+    response = await client.put(
+        f"/api/trips/{trip_id}/days/{day_id}/activities/{act_id}",
+        json={"sg_review": "sg也觉得好"},
+        headers=auth("sg"),
+    )
+
+    data = response.json()
+    assert data["sd_review"] == "sd觉得好"  # 未被覆盖
+    assert data["sg_review"] == "sg也觉得好"
 
 
 @pytest.mark.anyio
@@ -260,14 +311,43 @@ async def test_update_activity_extensions(client):
     response = await client.put(
         f"/api/trips/{trip_id}/days/{day_id}/activities/{act_id}",
         json={
-            "expense_amount": 100, "expense_payer": "sg", "expense_split": "assign",
-            "review": "一般般",
+            "expense_items": [{"amount": 100, "payer": "sg", "split": "assign"}],
             "need_reservation": False,
         },
         headers=auth(),
     )
 
     data = response.json()
-    assert data["expense_amount"] == 100
-    assert data["expense_payer"] == "sg"
-    assert data["review"] == "一般般"
+    assert len(data["expense_items"]) == 1
+    assert data["expense_items"][0]["amount"] == 100
+    assert data["expense_total"] == 100
+
+
+@pytest.mark.anyio
+async def test_update_activity_replaces_expense_items(client):
+    trip_id = await create_trip(client)
+    day_id = await create_day(client, trip_id)
+    act = await client.post(
+        f"/api/trips/{trip_id}/days/{day_id}/activities",
+        json={
+            "type": "eat", "name": "晚餐", "start_time": "18:00", "end_time": "20:00",
+            "expense_items": [
+                {"amount": 100, "payer": "sd", "split": "equal"},
+                {"amount": 200, "payer": "sg", "split": "assign"},
+            ],
+        },
+        headers=auth(),
+    )
+    act_id = act.json()["id"]
+    assert act.json()["expense_total"] == 300
+
+    # 替换为 1 条新开销
+    resp = await client.put(
+        f"/api/trips/{trip_id}/days/{day_id}/activities/{act_id}",
+        json={"expense_items": [{"amount": 50, "payer": "sd", "split": "equal"}]},
+        headers=auth(),
+    )
+    data = resp.json()
+    assert len(data["expense_items"]) == 1
+    assert data["expense_items"][0]["amount"] == 50
+    assert data["expense_total"] == 50

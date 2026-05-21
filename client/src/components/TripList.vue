@@ -8,9 +8,13 @@
             @click="showDrawer = true"
             class="text-sm text-gray-400 bg-white px-3 py-1 rounded-full border hover:bg-gray-100 transition"
           >回收站</button>
-          <span class="text-sm text-gray-400 bg-white px-3 py-1 rounded-full border">
+          <button
+            @click="switchUser"
+            class="text-sm text-gray-400 bg-white px-3 py-1 rounded-full border hover:text-blue-500 hover:border-blue-300 transition cursor-pointer"
+            title="切换用户"
+          >
             {{ currentUser }}
-          </span>
+          </button>
         </div>
       </div>
 
@@ -114,7 +118,7 @@ import ContextMenu from "./ContextMenu.vue";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import RecycleBinDrawer from "./RecycleBinDrawer.vue";
 
-const { current: currentUser } = useUser();
+const { current: currentUser, switchUser } = useUser();
 const router = useRouter();
 
 const trips = ref([]);
