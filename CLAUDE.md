@@ -15,6 +15,28 @@ travel-planner 是一个家庭旅行规划工具，供 sd 和 sg 两人使用。
 
 ---
 
+## 项目目录结构
+
+```
+travel-planner/
+├── server/       ← FastAPI 后端（Python）
+│   ├── app.py    ← 应用工厂 create_app()
+│   ├── main.py   ← uvicorn 入口，端口 3001
+│   ├── db/       ← 数据库 schema + 连接
+│   ├── routes/   ← API 路由
+│   ├── services/ ← 业务逻辑
+│   ├── middleware/
+│   ├── ws/       ← WebSocket 管理
+│   └── tests/    ← pytest
+├── client/       ← Vue 3 前端（npm run dev → 5173）
+│   └── src/
+├── data/         ← SQLite 数据库文件（运行时生成）
+├── docker/       ← Dockerfile + docker-compose.yml
+└── .scratch/     ← Issue 本地草稿
+```
+
+---
+
 ## 用户模型
 
 无密码登录。前端两个按钮 "sd" / "sg"，选后存 `localStorage`，请求带 `X-User` header。后端读 header 识别用户。
@@ -115,7 +137,6 @@ RESTful 风格，`/api/*` + `/ws`：
 - 代码 review 中列出的 7 个改进项
 - 拖拽排序的前端交互（目前只有 API 支持）
 - 更好的错误提示和日志
-- 暗黑模式 / 多语言
 
 ---
 
@@ -132,6 +153,12 @@ export PYTHON=/d/document/Anaconda/envs/myaccounting/python.exe
 ```
 
 所有 Python 命令用 `$PYTHON` 替代 `python`，pip 用 `$PYTHON -m pip`。uvicorn 和 pytest 在 myaccounting 环境的 Scripts 下，可直接用。
+
+### 关键注意事项
+
+- **Bash 工作目录持久化**：`cd xxx` 的效果会持续到后续所有 bash 命令。务必总是在同一命令中用 `cd /d/document/personal_tools/travel-planner/server && ...` 或 `cd /d/document/personal_tools/travel-planner/client && ...` 显式切换，不要假设之前已经在目标目录。
+- **不要 `cd server` 再 `cd client` 分散到两条命令**——第二条会从第一条的目录继续。
+- 后端入口是 `server/app.py`（不是 `app/main.py`），导入用 `from app import create_app`。
 
 ### 当前环境版本
 
