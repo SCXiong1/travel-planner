@@ -5,6 +5,12 @@ from pydantic import BaseModel
 from services import activity_service
 
 
+class ExpenseItem(BaseModel):
+    amount: float
+    payer: str
+    split: str
+
+
 class CreateActivityBody(BaseModel):
     type: str
     name: str
@@ -13,10 +19,9 @@ class CreateActivityBody(BaseModel):
     end_time: str = ""
     need_reservation: bool = False
     reservation_detail: str = ""
-    expense_amount: float | None = None
-    expense_payer: str = ""
-    expense_split: str = ""
-    review: str = ""
+    expense_items: list[ExpenseItem] = []
+    sd_review: str = ""
+    sg_review: str = ""
 
 
 class UpdateActivityBody(BaseModel):
@@ -27,10 +32,9 @@ class UpdateActivityBody(BaseModel):
     end_time: str | None = None
     need_reservation: bool | None = None
     reservation_detail: str | None = None
-    expense_amount: float | None = None
-    expense_payer: str | None = None
-    expense_split: str | None = None
-    review: str | None = None
+    expense_items: list[ExpenseItem] | None = None
+    sd_review: str | None = None
+    sg_review: str | None = None
 
 
 class ReorderItem(BaseModel):
@@ -43,7 +47,7 @@ router = APIRouter(prefix="/api/trips/{trip_id}/days/{day_id}/activities", tags=
 
 @router.post("")
 async def create(request: Request, trip_id: int, day_id: int, body: CreateActivityBody):
-    act = activity_service.create_activity(request.state.db, day_id, body.model_dump())
+    act = activity_service.create_activity(request.state.db, day_id, body.model_dump(), request.state.user)
     await request.app.state.ws_manager.broadcast(trip_id, "activity_created", act)
     return act
 
@@ -65,6 +69,7 @@ async def update(request: Request, trip_id: int, day_id: int, act_id: int, body:
     act = activity_service.update_activity(
         request.state.db, act_id,
         {k: v for k, v in body.model_dump().items() if v is not None},
+        request.state.user,
     )
     if not act:
         raise HTTPException(404, "活动不存在")

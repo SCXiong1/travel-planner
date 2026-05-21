@@ -36,9 +36,18 @@ def init_db(conn):
             expense_amount REAL,
             expense_payer TEXT CHECK(expense_payer IN ('sd', 'sg')),
             expense_split TEXT CHECK(expense_split IN ('equal', 'assign')),
-            review TEXT,
+            sd_review TEXT DEFAULT '',
+            sg_review TEXT DEFAULT '',
             sort_order INTEGER NOT NULL DEFAULT 0,
             deleted_at TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS expense_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            activity_id INTEGER NOT NULL REFERENCES activities(id),
+            amount REAL NOT NULL,
+            payer TEXT NOT NULL CHECK(payer IN ('sd', 'sg')),
+            split TEXT NOT NULL CHECK(split IN ('equal', 'assign'))
         );
 
         CREATE TABLE IF NOT EXISTS packing_items (
@@ -53,4 +62,28 @@ def init_db(conn):
         );
         """
     )
+    conn.commit()
+
+
+def migrate(conn):
+    """增量迁移：sd_review/sg_review 列 + expense_items 表"""
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(activities)").fetchall()]
+    if "sd_review" not in cols:
+        conn.execute("ALTER TABLE activities ADD COLUMN sd_review TEXT DEFAULT ''")
+    if "sg_review" not in cols:
+        conn.execute("ALTER TABLE activities ADD COLUMN sg_review TEXT DEFAULT ''")
+
+    tables = [r[0] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='expense_items'"
+    ).fetchall()]
+    if not tables:
+        conn.execute(
+            """CREATE TABLE expense_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                activity_id INTEGER NOT NULL REFERENCES activities(id),
+                amount REAL NOT NULL,
+                payer TEXT NOT NULL CHECK(payer IN ('sd', 'sg')),
+                split TEXT NOT NULL CHECK(split IN ('equal', 'assign'))
+            )"""
+        )
     conn.commit()

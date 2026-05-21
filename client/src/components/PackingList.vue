@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { api } from "../api/client.js";
 import { useUser } from "../composables/useUser.js";
@@ -90,11 +90,18 @@ async function deleteItem(item) {
   await load();
 }
 
+function onWsMessage(msg) {
+  if (msg.type.startsWith("packing_")) load();
+}
+
 onMounted(() => {
   load();
-  ws.connect(tripId, currentUser.value, (msg) => {
-    if (msg.type.startsWith("packing_")) load();
-  });
+  ws.connect(tripId, currentUser.value, onWsMessage);
+});
+
+watch(currentUser, () => {
+  ws.disconnect();
+  ws.connect(tripId, currentUser.value, onWsMessage);
 });
 
 onUnmounted(() => {

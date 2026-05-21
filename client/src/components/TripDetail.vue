@@ -74,11 +74,17 @@
               </div>
               <div class="font-medium text-gray-800 mt-1">{{ act.name }}</div>
               <div v-if="act.location" class="text-xs text-gray-400 mt-0.5">{{ act.location }}</div>
-              <div v-if="act.expense_amount" class="text-xs text-gray-500 mt-1">
-                ¥{{ act.expense_amount }} {{ act.expense_payer }}付 · {{ act.expense_split === 'equal' ? '平分' : '归集' }}
+              <div v-if="act.expense_total" class="text-xs text-gray-500 mt-1">
+                ¥{{ act.expense_total }}
+                <span v-if="act.expense_items?.length">（{{ act.expense_items.length }}笔）</span>
               </div>
-              <div v-if="act.review" class="text-xs text-gray-400 mt-1 italic">
-                "{{ act.review.length > 50 ? act.review.slice(0, 50) + '...' : act.review }}"
+              <div v-if="act.sd_review || act.sg_review" class="text-xs text-gray-400 mt-1 space-y-0.5">
+                <div v-if="act.sd_review" class="italic">
+                  <span class="text-blue-500 not-italic font-medium">sd:</span> "{{ act.sd_review.length > 30 ? act.sd_review.slice(0, 30) + '...' : act.sd_review }}"
+                </div>
+                <div v-if="act.sg_review" class="italic">
+                  <span class="text-pink-500 not-italic font-medium">sg:</span> "{{ act.sg_review.length > 30 ? act.sg_review.slice(0, 30) + '...' : act.sg_review }}"
+                </div>
               </div>
             </div>
           </div>
@@ -143,36 +149,49 @@
 
                 <!-- 开销 -->
                 <div class="border-t pt-3 mb-3">
-                  <p class="text-sm font-medium text-gray-600 mb-2">开销（可选）</p>
-                  <div class="flex gap-3 mb-2">
-                    <div class="flex-1">
-                      <label class="block text-xs text-gray-500 mb-0.5">金额</label>
-                      <input v-model.number="form.expense_amount" type="number" step="0.01"
-                        class="w-full border rounded-lg px-3 py-2 text-gray-800 text-sm" />
-                    </div>
-                    <div class="flex-1">
-                      <label class="block text-xs text-gray-500 mb-0.5">支付人</label>
-                      <select v-model="form.expense_payer" class="w-full border rounded-lg px-3 py-2 text-gray-800 text-sm bg-white">
-                        <option value="">-</option>
-                        <option value="sd">sd</option>
-                        <option value="sg">sg</option>
-                      </select>
-                    </div>
+                  <div class="flex items-center justify-between mb-2">
+                    <p class="text-sm font-medium text-gray-600">开销（可选）</p>
+                    <button type="button" @click="addExpenseLine"
+                      class="text-xs text-blue-500 hover:text-blue-600">+ 添加一笔</button>
                   </div>
-                  <div v-if="form.expense_payer">
-                    <label class="block text-xs text-gray-500 mb-0.5">分摊方式</label>
-                    <select v-model="form.expense_split" class="w-full border rounded-lg px-3 py-2 text-gray-800 text-sm bg-white">
-                      <option value="equal">平分</option>
-                      <option value="assign">归集到此支付人</option>
+                  <div v-for="item in form.expense_items" :key="item._key"
+                    class="flex gap-2 mb-2 items-start">
+                    <div class="flex-1 min-w-0">
+                      <input v-model.number="item.amount" type="number" step="0.01" placeholder="金额"
+                        class="w-full border rounded-lg px-2 py-1.5 text-gray-800 text-sm" />
+                    </div>
+                    <select v-model="item.payer" class="w-14 border rounded-lg px-1 py-1.5 text-sm text-gray-800 bg-white flex-shrink-0">
+                      <option value="sd">sd</option>
+                      <option value="sg">sg</option>
                     </select>
+                    <select v-model="item.split" class="w-20 border rounded-lg px-1 py-1.5 text-sm text-gray-800 bg-white flex-shrink-0">
+                      <option value="equal">平分</option>
+                      <option value="assign">归集</option>
+                    </select>
+                    <button type="button" @click="removeExpenseLine(idx)"
+                      class="w-6 h-8 flex items-center justify-center text-gray-300 hover:text-red-500 flex-shrink-0">&times;</button>
                   </div>
                 </div>
 
                 <!-- 评价 -->
                 <div class="border-t pt-3 mb-4">
-                  <label class="block text-sm font-medium text-gray-600 mb-1">评价（可选）</label>
-                  <textarea v-model="form.review" rows="2" placeholder="旅行评价..."
-                    class="w-full border rounded-lg px-3 py-2 text-gray-800 text-sm resize-none"></textarea>
+                  <p class="text-sm font-medium text-gray-600 mb-2">评价（可选）</p>
+                  <div class="mb-2">
+                    <label class="block text-xs text-blue-500 font-medium mb-0.5">
+                      sd 评价 <span v-if="currentUser !== 'sd'" class="text-gray-400">（仅sd可编辑）</span>
+                    </label>
+                    <textarea v-model="form.sd_review" rows="2" placeholder="sd 的评价..."
+                      :disabled="currentUser !== 'sd'"
+                      class="w-full border rounded-lg px-3 py-2 text-gray-800 text-sm resize-none disabled:bg-gray-100 disabled:text-gray-400"></textarea>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-pink-500 font-medium mb-0.5">
+                      sg 评价 <span v-if="currentUser !== 'sg'" class="text-gray-400">（仅sg可编辑）</span>
+                    </label>
+                    <textarea v-model="form.sg_review" rows="2" placeholder="sg 的评价..."
+                      :disabled="currentUser !== 'sg'"
+                      class="w-full border rounded-lg px-3 py-2 text-gray-800 text-sm resize-none disabled:bg-gray-100 disabled:text-gray-400"></textarea>
+                  </div>
                 </div>
 
                 <div class="flex gap-3">
@@ -191,7 +210,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, watch, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { api } from "../api/client.js";
 import { useUser } from "../composables/useUser.js";
@@ -212,9 +231,19 @@ const ws = useWebSocket();
 const form = ref({
   type: "eat", name: "", location: "", start_time: "", end_time: "",
   need_reservation: false, reservation_detail: "",
-  expense_amount: null, expense_payer: "", expense_split: "equal",
-  review: "",
+  expense_items: [],
+  sd_review: "", sg_review: "",
 });
+
+let expenseKeyCounter = 0;
+
+function addExpenseLine() {
+  form.value.expense_items.push({ _key: ++expenseKeyCounter, amount: null, payer: "sd", split: "equal" });
+}
+
+function removeExpenseLine(idx) {
+  form.value.expense_items.splice(idx, 1);
+}
 
 function typeLabel(t) {
   return { eat: "吃", stay: "住", transport: "行", sight: "景点" }[t] || t;
@@ -235,8 +264,8 @@ function resetForm() {
   form.value = {
     type: "eat", name: "", location: "", start_time: "", end_time: "",
     need_reservation: false, reservation_detail: "",
-    expense_amount: null, expense_payer: "", expense_split: "equal",
-    review: "",
+    expense_items: [],
+    sd_review: "", sg_review: "",
   };
 }
 
@@ -252,10 +281,9 @@ function openEditDialog(act) {
     start_time: act.start_time, end_time: act.end_time,
     need_reservation: !!act.need_reservation,
     reservation_detail: act.reservation_detail || "",
-    expense_amount: act.expense_amount,
-    expense_payer: act.expense_payer || "",
-    expense_split: act.expense_split || "equal",
-    review: act.review || "",
+    expense_items: act.expense_items?.length ? act.expense_items.map((e, i) => ({ ...e, _key: Date.now() + i })) : [],
+    sd_review: act.sd_review || "",
+    sg_review: act.sg_review || "",
   };
   showDialog.value = true;
 }
@@ -325,16 +353,20 @@ async function deleteActivity(actId) {
   await selectDay(selectedDay.value);
 }
 
+function onWsMessage(msg) {
+  if (msg.type.startsWith("activity_") || msg.type === "activities_reordered") {
+    if (selectedDay.value) selectDay(selectedDay.value);
+  }
+}
+
 onMounted(() => {
   loadTrip();
-  ws.connect(route.params.id, currentUser.value, (msg) => {
-    if (msg.type.startsWith("activity_") || msg.type === "activities_reordered") {
-      if (selectedDay.value) selectDay(selectedDay.value);
-    }
-    if (msg.type.startsWith("packing_")) {
-      // 打包页的同步由 PackingList 组件自行处理
-    }
-  });
+  ws.connect(route.params.id, currentUser.value, onWsMessage);
+});
+
+watch(currentUser, () => {
+  ws.disconnect();
+  ws.connect(route.params.id, currentUser.value, onWsMessage);
 });
 
 onUnmounted(() => {
