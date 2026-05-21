@@ -154,3 +154,50 @@ async def test_reorder_days(client):
     days = (await client.get(f"/api/trips/{trip_id}/days", headers=auth())).json()
     assert days[0]["id"] == d2
     assert days[1]["id"] == d1
+
+
+# ---------- date range validation ----------
+
+@pytest.mark.anyio
+async def test_create_day_out_of_range(client):
+    """创建 day 时 date 超出 trip 的 start_date~end_date 范围应返回 400"""
+    trip_id = await create_trip(client)  # 06-01 ~ 06-07
+
+    # 早于 start_date
+    r1 = await client.post(
+        f"/api/trips/{trip_id}/days",
+        json={"date": "2026-05-30"},
+        headers=auth(),
+    )
+    assert r1.status_code == 400
+
+    # 晚于 end_date
+    r2 = await client.post(
+        f"/api/trips/{trip_id}/days",
+        json={"date": "2026-06-10"},
+        headers=auth(),
+    )
+    assert r2.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_create_day_number_skips_deleted(client):
+    """软删除天后，新 day 的 day_number 不应回退复用已删的号码"""
+    trip_id = await create_trip(client)
+
+    # 创建 3 天
+    d1 = await client.post(f"/api/trips/{trip_id}/days", json={"date": "2026-06-01"}, headers=auth())
+    d2 = await client.post(f"/api/trips/{trip_id}/days", json={"date": "2026-06-02"}, headers=auth())
+    d3 = await client.post(f"/api/trips/{trip_id}/days", json={"date": "2026-06-03"}, headers=auth())
+
+    assert d1.json()["day_number"] == 1
+    assert d2.json()["day_number"] == 2
+    assert d3.json()["day_number"] == 3
+
+    # 软删除最后一天（第 3 天），暴露 MAX 回退 bug
+    await client.delete(f"/api/trips/{trip_id}/days/{d3.json()['id']}", headers=auth())
+
+    # 再创建新天，day_number 应为 4（严格递增），而非回退到 3
+    r = await client.post(f"/api/trips/{trip_id}/days", json={"date": "2026-06-04"}, headers=auth())
+    assert r.status_code == 200
+    assert r.json()["day_number"] == 4

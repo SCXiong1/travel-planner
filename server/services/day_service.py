@@ -1,10 +1,22 @@
 """天业务逻辑"""
 
+from fastapi import HTTPException
+
 
 def create_day(db, trip_id: int, data: dict) -> dict:
-    # 自动分配 day_number
+    # 校验 date 在 trip 范围内
+    trip = db.execute(
+        "SELECT start_date, end_date FROM trips WHERE id = ? AND deleted_at IS NULL",
+        (trip_id,),
+    ).fetchone()
+    if not trip:
+        raise HTTPException(404, "旅行不存在")
+    if data["date"] < trip["start_date"] or data["date"] > trip["end_date"]:
+        raise HTTPException(400, f"日期 {data['date']} 超出旅行范围 {trip['start_date']} ~ {trip['end_date']}")
+
+    # day_number 严格递增（不含 deleted_at 过滤，避免软删后回退）
     max_num = db.execute(
-        "SELECT COALESCE(MAX(day_number), 0) FROM days WHERE trip_id = ? AND deleted_at IS NULL",
+        "SELECT COALESCE(MAX(day_number), 0) FROM days WHERE trip_id = ?",
         (trip_id,),
     ).fetchone()[0]
 

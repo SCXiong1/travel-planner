@@ -261,8 +261,17 @@ async function selectDay(dayId) {
 }
 
 async function addDay() {
-  const date = days.value.length > 0 ? days.value[days.value.length - 1].date : trip.value.start_date;
-  const r = await api.post(`/trips/${route.params.id}/days`, { date });
+  const start = new Date(trip.value.start_date + 'T00:00:00');
+  const nextDate = new Date(start);
+  nextDate.setDate(start.getDate() + days.value.length);
+  const dateStr = nextDate.toISOString().slice(0, 10);
+
+  if (dateStr > trip.value.end_date) {
+    alert('已超过旅行结束日期，无法再添加天');
+    return;
+  }
+
+  const r = await api.post(`/trips/${route.params.id}/days`, { date: dateStr });
   await loadTrip();
   await selectDay(r.id);
 }
