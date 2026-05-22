@@ -103,7 +103,7 @@ async def test_list_trips_returns_all(client):
 
     data = response.json()
     assert len(data) == 2
-    assert data[0]["title"] == "韩国行"  # 后创建的在前
+    assert data[0]["title"] == "韩国行"  # 新建的 sort_order=0 排最前
     assert data[1]["title"] == "日本行"
 
 
@@ -170,3 +170,35 @@ async def test_delete_trip_soft(client):
 
     # 但可以通过 get 看到 deleted_at（实际上直接 get 也会被过滤的... 取决于实现）
     # 这里验证已删除的不会出现在列表中即可
+
+
+# ---------- date validation ----------
+
+@pytest.mark.anyio
+async def test_create_trip_start_after_end_returns_400(client):
+    response = await client.post(
+        "/api/trips",
+        json={"title": "日期错误", "destination": "测试", "start_date": "2026-06-07", "end_date": "2026-06-01"},
+        headers=auth(),
+    )
+
+    assert response.status_code == 400
+    assert "开始日期" in response.json()["detail"]
+
+
+@pytest.mark.anyio
+async def test_update_trip_start_after_end_returns_400(client):
+    await client.post(
+        "/api/trips",
+        json={"title": "测试", "destination": "测试", "start_date": "2026-06-01", "end_date": "2026-06-07"},
+        headers=auth(),
+    )
+
+    response = await client.put(
+        "/api/trips/1",
+        json={"title": "测试", "destination": "测试", "start_date": "2026-06-10", "end_date": "2026-06-05"},
+        headers=auth(),
+    )
+
+    assert response.status_code == 400
+    assert "开始日期" in response.json()["detail"]

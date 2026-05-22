@@ -225,7 +225,7 @@ async def test_create_activity_with_reservation(client):
     response = await client.post(
         f"/api/trips/{trip_id}/days/{day_id}/activities",
         json={
-            "type": "stay", "name": "温泉旅馆", "start_time": "18:00", "end_time": "08:00",
+            "type": "stay", "name": "温泉旅馆", "start_time": "15:00", "end_time": "18:00",
             "need_reservation": True, "reservation_detail": "已电话确认, 确认号 1234",
         },
         headers=auth(),
@@ -351,3 +351,40 @@ async def test_update_activity_replaces_expense_items(client):
     assert len(data["expense_items"]) == 1
     assert data["expense_items"][0]["amount"] == 50
     assert data["expense_total"] == 50
+
+
+# ---------- time validation ----------
+
+@pytest.mark.anyio
+async def test_create_activity_start_after_end_returns_400(client):
+    trip_id = await create_trip(client)
+    day_id = await create_day(client, trip_id)
+
+    response = await client.post(
+        f"/api/trips/{trip_id}/days/{day_id}/activities",
+        json={"type": "eat", "name": "测试", "start_time": "09:00", "end_time": "08:00"},
+        headers=auth(),
+    )
+
+    assert response.status_code == 400
+    assert "开始时间" in response.json()["detail"]
+
+
+@pytest.mark.anyio
+async def test_update_activity_start_after_end_returns_400(client):
+    trip_id = await create_trip(client)
+    day_id = await create_day(client, trip_id)
+    act_id = (await client.post(
+        f"/api/trips/{trip_id}/days/{day_id}/activities",
+        json={"type": "eat", "name": "早餐", "start_time": "08:00", "end_time": "09:00"},
+        headers=auth(),
+    )).json()["id"]
+
+    response = await client.put(
+        f"/api/trips/{trip_id}/days/{day_id}/activities/{act_id}",
+        json={"start_time": "10:00", "end_time": "09:00"},
+        headers=auth(),
+    )
+
+    assert response.status_code == 400
+    assert "开始时间" in response.json()["detail"]

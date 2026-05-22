@@ -24,26 +24,56 @@
       </p>
 
       <!-- 旅行卡片 -->
-      <div v-else class="space-y-3">
-        <div
-          v-for="trip in trips"
-          :key="trip.id"
-          class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition flex items-center"
-          @click="openTrip(trip.id)"
-        >
-          <div class="flex-1 min-w-0">
-            <h2 class="text-lg font-semibold text-gray-800 truncate">{{ trip.title }}</h2>
-            <p class="text-sm text-gray-500 mt-1">{{ trip.destination }} · {{ trip.start_date }} ~ {{ trip.end_date }}</p>
+      <div v-else>
+        <template v-for="(trip, idx) in trips" :key="trip.id">
+          <!-- 拖拽插入线 -->
+          <div :class="[
+            'h-1 mx-2 rounded transition-colors',
+            dragging && dropBefore === idx && idx !== dragIndex && idx !== dragIndex + 1
+              ? 'bg-blue-500' : 'bg-transparent'
+          ]" />
+          <div
+            :ref="el => setCardRef(idx, el)"
+            class="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition flex items-center"
+            :class="{
+              'cursor-pointer': !dragging,
+              'opacity-50': dragging && idx === dragIndex,
+            }"
+            @click="onCardClick(trip)"
+          >
+            <!-- 拖拽手柄 -->
+            <div
+              v-if="trips.length >= 2"
+              class="w-9 flex items-center justify-center text-gray-300 hover:text-gray-500 select-none self-stretch rounded-l-xl"
+              :class="dragging && idx === dragIndex ? 'cursor-grabbing bg-blue-50' : 'cursor-grab'"
+              style="touch-action: none;"
+              @pointerdown.prevent="onDragStart(idx, $event)"
+              @touchstart.prevent
+            >⋮</div>
+            <div class="flex-1 min-w-0 py-4 pr-4" :class="{ 'pl-4': trips.length < 2 }">
+              <h2 class="text-lg font-semibold text-gray-800 truncate">{{ trip.title }}</h2>
+              <p class="text-sm text-gray-500 mt-1">{{ trip.destination }} · {{ trip.start_date }} ~ {{ trip.end_date }}</p>
+            </div>
+            <ContextMenu @click.stop>
+              <template #default="{ close: closeMenu }">
+                <button
+                  @click="openEditDialog(trip); closeMenu()"
+                  class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >编辑</button>
+                <button
+                  @click="promptDelete(trip); closeMenu()"
+                  class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-50"
+                >删除</button>
+              </template>
+            </ContextMenu>
           </div>
-          <ContextMenu @click.stop>
-            <template #default="{ close: closeMenu }">
-              <button
-                @click="promptDelete(trip); closeMenu()"
-                class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-50"
-              >删除</button>
-            </template>
-          </ContextMenu>
-        </div>
+        </template>
+        <!-- 末尾插入线 -->
+        <div :class="[
+          'h-1 mx-2 rounded transition-colors',
+          dragging && dropBefore === trips.length && trips.length !== dragIndex && trips.length !== dragIndex + 1
+            ? 'bg-blue-500' : 'bg-transparent'
+        ]" />
       </div>
 
       <!-- 新建按钮 -->
@@ -110,7 +140,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useUser } from "../composables/useUser.js";
 import { useToast } from "../composables/useToast.js";
@@ -136,6 +166,84 @@ const showDrawer = ref(false);
 
 const form = ref({ title: "", destination: "", start_date: "", end_date: "" });
 
+// ---- 拖拽排序 ----
+const cardRefs = {};
+let dragIndex = -1;
+let dragGripEl = null;
+const dropBefore = ref(-1);
+const dragging = ref(false);
+let dragJustEnded = false;
+
+function setCardRef(idx, el) {
+  if (el) cardRefs[idx] = el;
+}
+
+function onDragStart(idx, event) {
+  dragIndex = idx;
+  dragging.value = true;
+  dragGripEl = event.currentTarget;
+  dragGripEl.setPointerCapture(event.pointerId);
+  dragGripEl.addEventListener("pointermove", onDragMove);
+  dragGripEl.addEventListener("pointerup", onDragEnd);
+  dragGripEl.addEventListener("pointercancel", onDragEnd);
+}
+
+function onDragMove(event) {
+  const y = event.clientY;
+  let ins = trips.value.length;
+  for (let i = 0; i < trips.value.length; i++) {
+    const rect = cardRefs[i]?.getBoundingClientRect();
+    if (rect && y < rect.top + rect.height / 2) {
+      ins = i;
+      break;
+    }
+  }
+  dropBefore.value = ins;
+}
+
+function onDragEnd() {
+  if (dragGripEl) {
+    dragGripEl.removeEventListener("pointermove", onDragMove);
+    dragGripEl.removeEventListener("pointerup", onDragEnd);
+    dragGripEl.removeEventListener("pointercancel", onDragEnd);
+    dragGripEl = null;
+  }
+
+  if (
+    dropBefore.value !== -1 &&
+    dropBefore.value !== dragIndex &&
+    dropBefore.value !== dragIndex + 1
+  ) {
+    performReorder();
+  } else {
+    dragIndex = -1;
+    dropBefore.value = -1;
+    dragging.value = false;
+  }
+
+  dragJustEnded = true;
+  nextTick(() => { dragJustEnded = false; });
+}
+
+function onCardClick(trip) {
+  if (dragJustEnded) return;
+  openTrip(trip.id);
+}
+
+async function performReorder() {
+  const arr = [...trips.value];
+  const [moved] = arr.splice(dragIndex, 1);
+  const newIdx = dropBefore.value < dragIndex ? dropBefore.value : dropBefore.value - 1;
+  arr.splice(newIdx, 0, moved);
+
+  const orders = arr.map((t, i) => ({ id: t.id, sort_order: i }));
+  await api.put("/trips/reorder", orders);
+  dragIndex = -1;
+  dropBefore.value = -1;
+  dragging.value = false;
+  await loadTrips();
+}
+
 async function loadTrips() {
   trips.value = await api.get("/trips");
 }
@@ -146,7 +254,22 @@ function openCreateDialog() {
   showDialog.value = true;
 }
 
+function openEditDialog(trip) {
+  editingTrip.value = trip;
+  form.value = {
+    title: trip.title,
+    destination: trip.destination,
+    start_date: trip.start_date,
+    end_date: trip.end_date,
+  };
+  showDialog.value = true;
+}
+
 async function submit() {
+  if (form.value.start_date > form.value.end_date) {
+    toast("开始日期不能晚于结束日期", { type: "error" });
+    return;
+  }
   if (editingTrip.value) {
     await api.put(`/trips/${editingTrip.value.id}`, form.value);
   } else {

@@ -12,6 +12,11 @@ class CreateTripBody(BaseModel):
     end_date: str
 
 
+class ReorderItem(BaseModel):
+    id: int
+    sort_order: int
+
+
 router = APIRouter(prefix="/api/trips", tags=["trips"])
 
 
@@ -31,6 +36,12 @@ async def get_one(request: Request, trip_id: int):
     if not trip:
         raise HTTPException(404, "旅行计划不存在")
     return trip
+
+
+@router.put("/reorder")
+async def reorder(request: Request, body: list[ReorderItem]):
+    trip_service.reorder_trips(request.state.db, [item.model_dump() for item in body])
+    return {"ok": True}
 
 
 @router.put("/{trip_id}")
