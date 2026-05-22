@@ -56,37 +56,64 @@
         <p v-if="!selectedDay" class="text-gray-300 text-center py-20">选择左侧的一天</p>
         <div v-else>
           <div v-if="activities.length === 0" class="text-gray-300 text-center py-20">还没有活动，点击下方添加</div>
-          <div v-else class="space-y-2">
-            <div v-for="act in activities" :key="act.id"
-              class="bg-white rounded-lg p-3 border border-gray-100 shadow-sm cursor-pointer hover:shadow-md transition relative"
-              @click="openEditDialog(act)">
-              <button
-                @click.stop="deleteActivity(act.id)"
-                class="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition"
-                title="删除活动"
-              >&times;</button>
-              <div class="flex items-center gap-2 pr-6">
-                <span :class="typeBadge(act.type)" class="text-xs px-2 py-0.5 rounded-full font-medium">
-                  {{ typeLabel(act.type) }}
-                </span>
-                <span class="text-sm text-gray-500">{{ act.start_time }} - {{ act.end_time }}</span>
-                <span v-if="act.need_reservation" class="text-xs text-orange-500">📋</span>
-              </div>
-              <div class="font-medium text-gray-800 mt-1">{{ act.name }}</div>
-              <div v-if="act.location" class="text-xs text-gray-400 mt-0.5">{{ act.location }}</div>
-              <div v-if="act.expense_total" class="text-xs text-gray-500 mt-1">
-                ¥{{ act.expense_total }}
-                <span v-if="act.expense_items?.length">（{{ act.expense_items.length }}笔）</span>
-              </div>
-              <div v-if="act.sd_review || act.sg_review" class="text-xs text-gray-400 mt-1 space-y-0.5">
-                <div v-if="act.sd_review" class="italic">
-                  <span class="text-blue-500 not-italic font-medium">sd:</span> "{{ act.sd_review.length > 30 ? act.sd_review.slice(0, 30) + '...' : act.sd_review }}"
+          <div v-else class="flex flex-col">
+            <template v-for="(act, idx) in activities" :key="act.id">
+              <!-- 拖拽插入线 -->
+              <div :class="[
+                'h-1 mx-2 rounded transition-colors',
+                dragging && dropBefore === idx && idx !== dragIndex && idx !== dragIndex + 1
+                  ? 'bg-blue-500' : 'bg-transparent'
+              ]" />
+              <div
+                :ref="el => setCardRef(idx, el)"
+                class="bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition relative"
+                :class="{ 'cursor-pointer': !dragging, 'opacity-50': dragging && idx === dragIndex }"
+                @click="onCardClick(act)"
+              >
+                <!-- 拖拽手柄 -->
+                <div v-if="activities.length >= 2"
+                  class="absolute left-1 top-0 bottom-0 w-7 flex items-center justify-center text-gray-300 hover:text-gray-500 select-none"
+                  :class="dragging && idx === dragIndex ? 'cursor-grabbing' : 'cursor-grab'"
+                  style="touch-action: none;"
+                  @pointerdown.prevent="onDragStart(idx, $event)"
+                  @touchstart.prevent
+                >⋮</div>
+                <div class="p-3 pl-8">
+                  <div class="flex items-center gap-2 pr-6">
+                    <span :class="typeBadge(act.type)" class="text-xs px-2 py-0.5 rounded-full font-medium">
+                      {{ typeLabel(act.type) }}
+                    </span>
+                    <span class="text-sm text-gray-500">{{ act.start_time }} - {{ act.end_time }}</span>
+                    <span v-if="act.need_reservation" class="text-xs text-orange-500">📋</span>
+                  </div>
+                  <div class="font-medium text-gray-800 mt-1">{{ act.name }}</div>
+                  <div v-if="act.location" class="text-xs text-gray-400 mt-0.5">{{ act.location }}</div>
+                  <div v-if="act.expense_total" class="text-xs text-gray-500 mt-1">
+                    ¥{{ act.expense_total }}
+                    <span v-if="act.expense_items?.length">（{{ act.expense_items.length }}笔）</span>
+                  </div>
+                  <div v-if="act.sd_review || act.sg_review" class="text-xs text-gray-400 mt-1 space-y-0.5">
+                    <div v-if="act.sd_review" class="italic">
+                      <span class="text-blue-500 not-italic font-medium">sd:</span> "{{ act.sd_review.length > 30 ? act.sd_review.slice(0, 30) + '...' : act.sd_review }}"
+                    </div>
+                    <div v-if="act.sg_review" class="italic">
+                      <span class="text-pink-500 not-italic font-medium">sg:</span> "{{ act.sg_review.length > 30 ? act.sg_review.slice(0, 30) + '...' : act.sg_review }}"
+                    </div>
+                  </div>
                 </div>
-                <div v-if="act.sg_review" class="italic">
-                  <span class="text-pink-500 not-italic font-medium">sg:</span> "{{ act.sg_review.length > 30 ? act.sg_review.slice(0, 30) + '...' : act.sg_review }}"
-                </div>
+                <button
+                  @click.stop="deleteActivity(act.id)"
+                  class="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition"
+                  title="删除活动"
+                >&times;</button>
               </div>
-            </div>
+            </template>
+            <!-- 末尾插入线 -->
+            <div :class="[
+              'h-1 mx-2 rounded transition-colors',
+              dragging && dropBefore === activities.length && activities.length !== dragIndex && activities.length !== dragIndex + 1
+                ? 'bg-blue-500' : 'bg-transparent'
+            ]" />
           </div>
 
           <button @click="openCreateDialog"
@@ -210,7 +237,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from "vue";
+import { ref, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { api } from "../api/client.js";
 import { useUser } from "../composables/useUser.js";
@@ -230,6 +257,88 @@ const { current: currentUser } = useUser();
 const ws = useWebSocket();
 const { show: toast } = useToast();
 
+// ---- 拖拽排序 ----
+const cardRefs = {};
+let dragIndex = -1;
+let dragGripEl = null;
+const dropBefore = ref(-1);
+const dragging = ref(false);
+let dragJustEnded = false;
+
+function setCardRef(idx, el) {
+  if (el) cardRefs[idx] = el;
+}
+
+function onDragStart(idx, event) {
+  dragIndex = idx;
+  dragging.value = true;
+  dragGripEl = event.currentTarget;
+  dragGripEl.setPointerCapture(event.pointerId);
+  dragGripEl.addEventListener("pointermove", onDragMove);
+  dragGripEl.addEventListener("pointerup", onDragEnd);
+  dragGripEl.addEventListener("pointercancel", onDragEnd);
+}
+
+function onDragMove(event) {
+  const y = event.clientY;
+  let ins = activities.value.length;
+  for (let i = 0; i < activities.value.length; i++) {
+    const rect = cardRefs[i]?.getBoundingClientRect();
+    if (rect && y < rect.top + rect.height / 2) {
+      ins = i;
+      break;
+    }
+  }
+  dropBefore.value = ins;
+}
+
+function onDragEnd() {
+  if (dragGripEl) {
+    dragGripEl.removeEventListener("pointermove", onDragMove);
+    dragGripEl.removeEventListener("pointerup", onDragEnd);
+    dragGripEl.removeEventListener("pointercancel", onDragEnd);
+    dragGripEl = null;
+  }
+
+  if (
+    dropBefore.value !== -1 &&
+    dropBefore.value !== dragIndex &&
+    dropBefore.value !== dragIndex + 1
+  ) {
+    performReorder();
+  } else {
+    dragIndex = -1;
+    dropBefore.value = -1;
+    dragging.value = false;
+  }
+
+  dragJustEnded = true;
+  nextTick(() => { dragJustEnded = false; });
+}
+
+function onCardClick(act) {
+  if (dragJustEnded) return;
+  openEditDialog(act);
+}
+
+async function performReorder() {
+  const acts = [...activities.value];
+  const [moved] = acts.splice(dragIndex, 1);
+  const newIdx = dropBefore.value < dragIndex ? dropBefore.value : dropBefore.value - 1;
+  acts.splice(newIdx, 0, moved);
+
+  const orders = acts.map((a, i) => ({ id: a.id, sort_order: i }));
+  await api.put(
+    `/trips/${route.params.id}/days/${selectedDay.value}/activities/reorder`,
+    orders,
+  );
+  dragIndex = -1;
+  dropBefore.value = -1;
+  dragging.value = false;
+  await selectDay(selectedDay.value);
+}
+
+// ---- 表单 ----
 const form = ref({
   type: "eat", name: "", location: "", start_time: "", end_time: "",
   need_reservation: false, reservation_detail: "",
