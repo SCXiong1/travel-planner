@@ -323,16 +323,29 @@ async function addDay() {
   } else {
     nextDate = new Date(trip.value.start_date + 'T00:00:00');
   }
-  const dateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
 
-  if (dateStr > trip.value.end_date) {
-    alert('已超过旅行结束日期，无法再添加天');
-    return;
+  const endDate = trip.value.end_date;
+  while (true) {
+    const dateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
+
+    if (dateStr > endDate) {
+      alert('已超过旅行结束日期，无法再添加天');
+      return;
+    }
+
+    try {
+      const r = await api.post(`/trips/${route.params.id}/days`, { date: dateStr });
+      await loadTrip();
+      await selectDay(r.id);
+      return;
+    } catch (e) {
+      if (e.status === 409) {
+        nextDate.setDate(nextDate.getDate() + 1);
+        continue;
+      }
+      throw e;
+    }
   }
-
-  const r = await api.post(`/trips/${route.params.id}/days`, { date: dateStr });
-  await loadTrip();
-  await selectDay(r.id);
 }
 
 const deleteTargetDay = ref(null);

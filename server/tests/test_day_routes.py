@@ -232,6 +232,22 @@ async def test_create_day_duplicate_date(client):
 
 
 @pytest.mark.anyio
+async def test_create_day_cannot_reuse_deleted_date(client):
+    """软删除某天后，新 day 不能复用该天的日期（防止 day_number 与日期不匹配）"""
+    trip_id = await create_trip(client)
+
+    d1 = await client.post(f"/api/trips/{trip_id}/days", json={"date": "2026-06-02"}, headers=auth())
+    assert d1.status_code == 200
+
+    # 删除
+    await client.delete(f"/api/trips/{trip_id}/days/{d1.json()['id']}", headers=auth())
+
+    # 尝试复用已删日的日期
+    r = await client.post(f"/api/trips/{trip_id}/days", json={"date": "2026-06-02"}, headers=auth())
+    assert r.status_code == 409
+
+
+@pytest.mark.anyio
 async def test_create_day_number_skips_deleted(client):
     """软删除天后，新 day 的 day_number 不应回退复用已删的号码"""
     trip_id = await create_trip(client)

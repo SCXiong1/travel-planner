@@ -14,9 +14,9 @@ def create_day(db, trip_id: int, data: dict) -> dict:
     if data["date"] < trip["start_date"] or data["date"] > trip["end_date"]:
         raise HTTPException(400, f"日期 {data['date']} 超出旅行范围 {trip['start_date']} ~ {trip['end_date']}")
 
-    # 同 trip 内日期不能重复（排除已软删的）
+    # 同 trip 内日期不能重复（含软删，防止日期复用造成 day_number 与日期不匹配）
     dup = db.execute(
-        "SELECT id FROM days WHERE trip_id = ? AND date = ? AND deleted_at IS NULL",
+        "SELECT id FROM days WHERE trip_id = ? AND date = ?",
         (trip_id, data["date"]),
     ).fetchone()
     if dup:
@@ -59,7 +59,7 @@ def update_day(db, day_id: int, data: dict) -> dict | None:
     # 修改日期时检查同 trip 内是否已有该日期
     if "date" in data and data["date"] != day["date"]:
         dup = db.execute(
-            "SELECT id FROM days WHERE trip_id = ? AND date = ? AND deleted_at IS NULL AND id != ?",
+            "SELECT id FROM days WHERE trip_id = ? AND date = ? AND id != ?",
             (day["trip_id"], data["date"], day_id),
         ).fetchone()
         if dup:
