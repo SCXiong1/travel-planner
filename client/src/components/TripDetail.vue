@@ -215,6 +215,7 @@ import { useRoute } from "vue-router";
 import { api } from "../api/client.js";
 import { useUser } from "../composables/useUser.js";
 import { useWebSocket } from "../composables/useWebSocket.js";
+import { useToast } from "../composables/useToast.js";
 import ContextMenu from "./ContextMenu.vue";
 import ConfirmDialog from "./ConfirmDialog.vue";
 
@@ -227,6 +228,7 @@ const showDialog = ref(false);
 const editingAct = ref(null);
 const { current: currentUser } = useUser();
 const ws = useWebSocket();
+const { show: toast } = useToast();
 
 const form = ref({
   type: "eat", name: "", location: "", start_time: "", end_time: "",
@@ -329,7 +331,7 @@ async function addDay() {
     const dateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
 
     if (dateStr > endDate) {
-      alert('已超过旅行结束日期，无法再添加天');
+      toast('已超过旅行结束日期，无法再添加天', { type: 'info' });
       return;
     }
 
