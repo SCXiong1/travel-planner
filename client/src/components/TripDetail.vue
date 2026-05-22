@@ -315,9 +315,14 @@ async function selectDay(dayId) {
 }
 
 async function addDay() {
-  const start = new Date(trip.value.start_date + 'T00:00:00');
-  const nextDate = new Date(start);
-  nextDate.setDate(start.getDate() + days.value.length);
+  let nextDate;
+  if (days.value.length > 0) {
+    const lastDate = days.value[days.value.length - 1].date;
+    nextDate = new Date(lastDate + 'T00:00:00');
+    nextDate.setDate(nextDate.getDate() + 1);
+  } else {
+    nextDate = new Date(trip.value.start_date + 'T00:00:00');
+  }
   const dateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
 
   if (dateStr > trip.value.end_date) {

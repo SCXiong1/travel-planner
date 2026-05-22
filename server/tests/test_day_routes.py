@@ -120,6 +120,17 @@ async def test_update_day(client):
     assert data["title"] == "第三天"
 
 
+@pytest.mark.anyio
+async def test_update_day_duplicate_date(client):
+    """更新 day 日期为同 trip 内已存在的日期应返回 409"""
+    trip_id = await create_trip(client)
+    id1 = (await client.post(f"/api/trips/{trip_id}/days", json={"date": "2026-06-01"}, headers=auth())).json()["id"]
+    id2 = (await client.post(f"/api/trips/{trip_id}/days", json={"date": "2026-06-02"}, headers=auth())).json()["id"]
+
+    r = await client.put(f"/api/trips/{trip_id}/days/{id2}", json={"date": "2026-06-01"}, headers=auth())
+    assert r.status_code == 409
+
+
 # ---------- delete ----------
 
 @pytest.mark.anyio
@@ -198,6 +209,26 @@ async def test_create_day_boundary_dates(client):
         headers=auth(),
     )
     assert r2.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_create_day_duplicate_date(client):
+    """同 trip 内不能创建两个相同日期的 day"""
+    trip_id = await create_trip(client)
+
+    r1 = await client.post(
+        f"/api/trips/{trip_id}/days",
+        json={"date": "2026-06-03"},
+        headers=auth(),
+    )
+    assert r1.status_code == 200
+
+    r2 = await client.post(
+        f"/api/trips/{trip_id}/days",
+        json={"date": "2026-06-03"},
+        headers=auth(),
+    )
+    assert r2.status_code == 409
 
 
 @pytest.mark.anyio
