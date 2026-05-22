@@ -440,7 +440,14 @@ async function addDay() {
     const dateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
 
     if (dateStr > endDate) {
-      toast('已超过旅行结束日期，无法再添加天', { type: 'info' });
+      const start = new Date(trip.value.start_date + 'T00:00:00');
+      const end = new Date(trip.value.end_date + 'T00:00:00');
+      const totalDays = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+      if (days.value.length < totalDays) {
+        toast('之前删过中间的天，有日期缺口，请从回收站恢复', { type: 'info' });
+      } else {
+        toast('已超过旅行结束日期，无法再添加天', { type: 'info' });
+      }
       return;
     }
 
