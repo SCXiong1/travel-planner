@@ -1,0 +1,6 @@
+client/dist
+client/node_modules
+data
+.git
+.scratch
+**/__pycache__
