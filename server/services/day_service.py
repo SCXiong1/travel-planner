@@ -14,6 +14,14 @@ def create_day(db, trip_id: int, data: dict) -> dict:
     if data["date"] < trip["start_date"] or data["date"] > trip["end_date"]:
         raise HTTPException(400, f"日期 {data['date']} 超出旅行范围 {trip['start_date']} ~ {trip['end_date']}")
 
+    # 同 trip 内日期不能重复（含软删，防止日期复用造成 day_number 与日期不匹配）
+    dup = db.execute(
+        "SELECT id FROM days WHERE trip_id = ? AND date = ?",
+        (trip_id, data["date"]),
+    ).fetchone()
+    if dup:
+        raise HTTPException(409, f"日期 {data['date']} 已存在，不能重复添加")
+
     # day_number 严格递增（不含 deleted_at 过滤，避免软删后回退）
     max_num = db.execute(
         "SELECT COALESCE(MAX(day_number), 0) FROM days WHERE trip_id = ?",
@@ -48,6 +56,14 @@ def update_day(db, day_id: int, data: dict) -> dict | None:
     day = get_day(db, day_id)
     if not day:
         return None
+    # 修改日期时检查同 trip 内是否已有该日期
+    if "date" in data and data["date"] != day["date"]:
+        dup = db.execute(
+            "SELECT id FROM days WHERE trip_id = ? AND date = ? AND id != ?",
+            (day["trip_id"], data["date"], day_id),
+        ).fetchone()
+        if dup:
+            raise HTTPException(409, f"日期 {data['date']} 已存在，不能重复")
     fields = []
     values = []
     for key in ("date", "title"):

@@ -62,12 +62,14 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { api } from "../api/client.js";
+import { useToast } from "../composables/useToast.js";
 import ConfirmDialog from "./ConfirmDialog.vue";
 
 defineEmits(["close"]);
 
 const items = ref([]);
 const permDeleteTarget = ref(null);
+const { show: toast } = useToast();
 
 const typeMap = {
   trip: "旅行",
@@ -108,7 +110,7 @@ async function restore(item) {
     await api.post(`/recycle-bin/${item.type}/${item.id}/restore`);
     await load();
   } catch (e) {
-    alert(e.message || "恢复失败");
+    toast(e.message || "恢复失败");
     await load();
   }
 }

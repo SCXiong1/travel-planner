@@ -9,7 +9,7 @@
             class="text-sm text-gray-400 bg-white px-3 py-1 rounded-full border hover:bg-gray-100 transition"
           >回收站</button>
           <button
-            @click="switchUser"
+            @click="handleSwitchUser"
             class="text-sm text-gray-400 bg-white px-3 py-1 rounded-full border hover:text-blue-500 hover:border-blue-300 transition cursor-pointer"
             title="切换用户"
           >
@@ -113,13 +113,20 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useUser } from "../composables/useUser.js";
+import { useToast } from "../composables/useToast.js";
 import { api } from "../api/client.js";
 import ContextMenu from "./ContextMenu.vue";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import RecycleBinDrawer from "./RecycleBinDrawer.vue";
 
 const { current: currentUser, switchUser } = useUser();
+const { show: toast } = useToast();
 const router = useRouter();
+
+function handleSwitchUser() {
+  switchUser();
+  toast("切换成功", { type: "info" });
+}
 
 const trips = ref([]);
 const showDialog = ref(false);
