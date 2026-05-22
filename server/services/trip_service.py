@@ -1,13 +1,20 @@
 """旅行计划业务逻辑"""
 
 from datetime import datetime
+from fastapi import HTTPException
 
 
 def create_trip(db, data: dict) -> dict:
+    if data["start_date"] > data["end_date"]:
+        raise HTTPException(400, "开始日期不能晚于结束日期")
+
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+    db.execute(
+        "UPDATE trips SET sort_order = sort_order + 1 WHERE deleted_at IS NULL"
+    )
     cursor = db.execute(
-        "INSERT INTO trips (title, destination, start_date, end_date, created_at) "
-        "VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO trips (title, destination, start_date, end_date, created_at, sort_order) "
+        "VALUES (?, ?, ?, ?, ?, 0)",
         (data["title"], data["destination"], data["start_date"], data["end_date"], now),
     )
     db.commit()
@@ -17,7 +24,7 @@ def create_trip(db, data: dict) -> dict:
 
 def list_trips(db) -> list[dict]:
     trips = db.execute(
-        "SELECT * FROM trips WHERE deleted_at IS NULL ORDER BY created_at DESC, id DESC"
+        "SELECT * FROM trips WHERE deleted_at IS NULL ORDER BY sort_order, id"
     ).fetchall()
     return [dict(t) for t in trips]
 
@@ -33,6 +40,12 @@ def update_trip(db, trip_id: int, data: dict) -> dict | None:
     trip = get_trip(db, trip_id)
     if not trip:
         return None
+
+    sd = data.get("start_date", trip["start_date"])
+    ed = data.get("end_date", trip["end_date"])
+    if sd > ed:
+        raise HTTPException(400, "开始日期不能晚于结束日期")
+
     fields = []
     values = []
     for key in ("title", "destination", "start_date", "end_date"):
@@ -51,5 +64,15 @@ def delete_trip(db, trip_id: int) -> bool:
     if not trip:
         return False
     db.execute("UPDATE trips SET deleted_at = datetime('now', 'localtime') WHERE id = ?", (trip_id,))
+    db.commit()
+    return True
+
+
+def reorder_trips(db, orders: list[dict]) -> bool:
+    for item in orders:
+        db.execute(
+            "UPDATE trips SET sort_order = ? WHERE id = ? AND deleted_at IS NULL",
+            (item["sort_order"], item["id"]),
+        )
     db.commit()
     return True

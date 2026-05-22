@@ -11,6 +11,7 @@ def init_db(conn):
             start_date TEXT NOT NULL,
             end_date TEXT NOT NULL,
             created_at TEXT NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
             deleted_at TEXT
         );
 
@@ -76,6 +77,10 @@ def migrate(conn):
     tables = [r[0] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='expense_items'"
     ).fetchall()]
+    trip_cols = [r[1] for r in conn.execute("PRAGMA table_info(trips)").fetchall()]
+    if "sort_order" not in trip_cols:
+        conn.execute("ALTER TABLE trips ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0")
+
     if not tables:
         conn.execute(
             """CREATE TABLE expense_items (

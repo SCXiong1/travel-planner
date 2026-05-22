@@ -400,6 +400,10 @@ function openEditDialog(act) {
 }
 
 async function submitActivity() {
+  if (form.value.start_time && form.value.end_time && form.value.start_time > form.value.end_time) {
+    toast("开始时间不能晚于结束时间", { type: "error" });
+    return;
+  }
   if (editingAct.value) {
     await api.put(
       `/trips/${route.params.id}/days/${selectedDay.value}/activities/${editingAct.value.id}`,

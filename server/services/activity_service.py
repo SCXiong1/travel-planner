@@ -1,5 +1,6 @@
 """活动业务逻辑"""
 
+from fastapi import HTTPException
 from services import expense_service
 
 
@@ -10,6 +11,11 @@ def _attach_expenses(db, act: dict) -> dict:
 
 
 def create_activity(db, day_id: int, data: dict, user: str = "") -> dict:
+    st = data.get("start_time", "")
+    et = data.get("end_time", "")
+    if st and et and st > et:
+        raise HTTPException(400, "开始时间不能晚于结束时间")
+
     max_order = db.execute(
         "SELECT COALESCE(MAX(sort_order), -1) FROM activities WHERE day_id = ? AND deleted_at IS NULL",
         (day_id,),
@@ -94,6 +100,13 @@ def update_activity(db, act_id: int, data: dict, user: str = "") -> dict | None:
         data.pop("sg_review", None)
     elif user == "sg":
         data.pop("sd_review", None)
+
+    # 校验时间：合并 data 和已有记录的值后比较
+    existing = dict(db.execute("SELECT start_time, end_time FROM activities WHERE id = ?", (act_id,)).fetchone())
+    st = data.get("start_time", existing["start_time"])
+    et = data.get("end_time", existing["end_time"])
+    if st and et and st > et:
+        raise HTTPException(400, "开始时间不能晚于结束时间")
 
     fields = []
     values = []
