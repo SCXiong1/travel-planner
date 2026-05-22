@@ -318,7 +318,7 @@ async function addDay() {
   const start = new Date(trip.value.start_date + 'T00:00:00');
   const nextDate = new Date(start);
   nextDate.setDate(start.getDate() + days.value.length);
-  const dateStr = nextDate.toISOString().slice(0, 10);
+  const dateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
 
   if (dateStr > trip.value.end_date) {
     alert('已超过旅行结束日期，无法再添加天');

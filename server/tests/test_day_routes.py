@@ -181,6 +181,26 @@ async def test_create_day_out_of_range(client):
 
 
 @pytest.mark.anyio
+async def test_create_day_boundary_dates(client):
+    """边界日期（start_date 和 end_date）应正常创建"""
+    trip_id = await create_trip(client)  # 06-01 ~ 06-07
+
+    r1 = await client.post(
+        f"/api/trips/{trip_id}/days",
+        json={"date": "2026-06-01"},
+        headers=auth(),
+    )
+    assert r1.status_code == 200
+
+    r2 = await client.post(
+        f"/api/trips/{trip_id}/days",
+        json={"date": "2026-06-07"},
+        headers=auth(),
+    )
+    assert r2.status_code == 200
+
+
+@pytest.mark.anyio
 async def test_create_day_number_skips_deleted(client):
     """软删除天后，新 day 的 day_number 不应回退复用已删的号码"""
     trip_id = await create_trip(client)
