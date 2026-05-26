@@ -138,13 +138,17 @@ function openEditDialog(act) {
 }
 
 async function submitActivity(data) {
-  if (editingAct.value) {
-    await activitiesApi.update(route.params.id, selectedDay.value, editingAct.value.id, data);
-  } else {
-    await activitiesApi.create(route.params.id, selectedDay.value, data);
+  try {
+    if (editingAct.value) {
+      await activitiesApi.update(route.params.id, selectedDay.value, editingAct.value.id, data);
+    } else {
+      await activitiesApi.create(route.params.id, selectedDay.value, data);
+    }
+    showDialog.value = false;
+    await selectDay(selectedDay.value);
+  } catch (e) {
+    toast(e.message || "操作失败", { type: "error" });
   }
-  showDialog.value = false;
-  await selectDay(selectedDay.value);
 }
 
 async function loadTrip() {

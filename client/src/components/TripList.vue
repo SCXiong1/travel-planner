@@ -206,13 +206,17 @@ async function submit() {
     toast("开始日期不能晚于结束日期", { type: "error" });
     return;
   }
-  if (editingTrip.value) {
-    await tripsApi.update(editingTrip.value.id, form.value);
-  } else {
-    await tripsApi.create(form.value);
+  try {
+    if (editingTrip.value) {
+      await tripsApi.update(editingTrip.value.id, form.value);
+    } else {
+      await tripsApi.create(form.value);
+    }
+    showDialog.value = false;
+    await loadTrips();
+  } catch (e) {
+    toast(e.message || "操作失败", { type: "error" });
   }
-  showDialog.value = false;
-  await loadTrips();
 }
 
 function openTrip(id) {

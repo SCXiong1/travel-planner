@@ -59,6 +59,7 @@ import { useRoute } from "vue-router";
 import * as packing from "../api/packing.js";
 import { useUser } from "../composables/useUser.js";
 import { useWebSocket } from "../composables/useWebSocket.js";
+import { useToast } from "../composables/useToast.js";
 
 const route = useRoute();
 const tripId = route.params.id;
@@ -66,6 +67,7 @@ const items = ref([]);
 const form = ref({ name: "", category: "", assignee: "sd" });
 const { current: currentUser } = useUser();
 const ws = useWebSocket();
+const { show: toast } = useToast();
 
 const checkedCount = computed(() => items.value.filter(i => i.checked).length);
 const progressPercent = computed(() => items.value.length ? Math.round((checkedCount.value / items.value.length) * 100) : 0);
@@ -75,9 +77,13 @@ async function load() {
 }
 
 async function addItem() {
-  await packing.create(tripId, form.value);
-  form.value = { name: "", category: form.value.category, assignee: form.value.assignee };
-  await load();
+  try {
+    await packing.create(tripId, form.value);
+    form.value = { name: "", category: form.value.category, assignee: form.value.assignee };
+    await load();
+  } catch (e) {
+    toast(e.message || "操作失败", { type: "error" });
+  }
 }
 
 async function toggleCheck(item) {
