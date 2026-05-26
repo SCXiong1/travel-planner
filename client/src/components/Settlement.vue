@@ -50,13 +50,13 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
-import { api } from "../api/client.js";
+import { get as getSettlement } from "../api/settlement.js";
 
 const route = useRoute();
 const tripId = route.params.id;
 const data = ref({ sd_paid: 0, sg_paid: 0, total: 0, sd_owes: 0, sg_owes: 0, sd_balance: 0, sg_balance: 0 });
 
 onMounted(async () => {
-  data.value = await api.get(`/trips/${tripId}/settlement`);
+  data.value = await getSettlement(tripId);
 });
 </script>

@@ -140,11 +140,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useUser } from "../composables/useUser.js";
 import { useToast } from "../composables/useToast.js";
-import { api } from "../api/client.js";
+import * as tripsApi from "../api/trips.js";
+import { useDragReorder } from "../composables/useDragReorder.js";
 import ContextMenu from "./ContextMenu.vue";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import RecycleBinDrawer from "./RecycleBinDrawer.vue";
@@ -167,85 +168,20 @@ const showDrawer = ref(false);
 const form = ref({ title: "", destination: "", start_date: "", end_date: "" });
 
 // ---- 拖拽排序 ----
-const cardRefs = {};
-let dragIndex = -1;
-let dragGripEl = null;
-const dropBefore = ref(-1);
-const dragging = ref(false);
-let dragJustEnded = false;
-
-function setCardRef(idx, el) {
-  if (el) cardRefs[idx] = el;
-}
-
-function onDragStart(idx, event) {
-  dragIndex = idx;
-  dragging.value = true;
-  dragGripEl = event.currentTarget;
-  dragGripEl.setPointerCapture(event.pointerId);
-  dragGripEl.addEventListener("pointermove", onDragMove);
-  dragGripEl.addEventListener("pointerup", onDragEnd);
-  dragGripEl.addEventListener("pointercancel", onDragEnd);
-}
-
-function onDragMove(event) {
-  const y = event.clientY;
-  let ins = trips.value.length;
-  for (let i = 0; i < trips.value.length; i++) {
-    const rect = cardRefs[i]?.getBoundingClientRect();
-    if (rect && y < rect.top + rect.height / 2) {
-      ins = i;
-      break;
-    }
-  }
-  dropBefore.value = ins;
-}
-
-function onDragEnd() {
-  if (dragGripEl) {
-    dragGripEl.removeEventListener("pointermove", onDragMove);
-    dragGripEl.removeEventListener("pointerup", onDragEnd);
-    dragGripEl.removeEventListener("pointercancel", onDragEnd);
-    dragGripEl = null;
-  }
-
-  if (
-    dropBefore.value !== -1 &&
-    dropBefore.value !== dragIndex &&
-    dropBefore.value !== dragIndex + 1
-  ) {
-    performReorder();
-  } else {
-    dragIndex = -1;
-    dropBefore.value = -1;
-    dragging.value = false;
-  }
-
-  dragJustEnded = true;
-  nextTick(() => { dragJustEnded = false; });
-}
-
-function onCardClick(trip) {
-  if (dragJustEnded) return;
-  openTrip(trip.id);
-}
-
-async function performReorder() {
-  const arr = [...trips.value];
-  const [moved] = arr.splice(dragIndex, 1);
-  const newIdx = dropBefore.value < dragIndex ? dropBefore.value : dropBefore.value - 1;
-  arr.splice(newIdx, 0, moved);
-
-  const orders = arr.map((t, i) => ({ id: t.id, sort_order: i }));
-  await api.put("/trips/reorder", orders);
-  dragIndex = -1;
-  dropBefore.value = -1;
-  dragging.value = false;
-  await loadTrips();
-}
+const {
+  setCardRef, onDragStart, onDragMove, onDragEnd, onCardClick,
+  dragging, dragJustEnded, dropBefore, dragIndex,
+} = useDragReorder({
+  items: trips,
+  onReorder: async (orders) => {
+    await tripsApi.reorder(orders);
+    await loadTrips();
+  },
+  onClick: (trip) => openTrip(trip.id),
+});
 
 async function loadTrips() {
-  trips.value = await api.get("/trips");
+  trips.value = await tripsApi.list();
 }
 
 function openCreateDialog() {
@@ -270,13 +206,17 @@ async function submit() {
     toast("开始日期不能晚于结束日期", { type: "error" });
     return;
   }
-  if (editingTrip.value) {
-    await api.put(`/trips/${editingTrip.value.id}`, form.value);
-  } else {
-    await api.post("/trips", form.value);
+  try {
+    if (editingTrip.value) {
+      await tripsApi.update(editingTrip.value.id, form.value);
+    } else {
+      await tripsApi.create(form.value);
+    }
+    showDialog.value = false;
+    await loadTrips();
+  } catch (e) {
+    toast(e.message || "操作失败", { type: "error" });
   }
-  showDialog.value = false;
-  await loadTrips();
 }
 
 function openTrip(id) {
@@ -290,7 +230,7 @@ function promptDelete(trip) {
 async function confirmDelete() {
   const trip = deleteTarget.value;
   deleteTarget.value = null;
-  await api.delete(`/trips/${trip.id}`);
+  await tripsApi.remove(trip.id);
   await loadTrips();
 }
 
