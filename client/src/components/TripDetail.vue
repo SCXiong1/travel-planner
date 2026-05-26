@@ -100,6 +100,7 @@ import { useWebSocket } from "../composables/useWebSocket.js";
 import { useToast } from "../composables/useToast.js";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import ActivityCard from "./ActivityCard.vue";
+import ActivityForm from "./ActivityForm.vue";
 import DaySidebar from "./DaySidebar.vue";
 
 const route = useRoute();
