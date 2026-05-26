@@ -3,6 +3,10 @@ import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  test: {
+    environment: "jsdom",
+    include: ["src/**/*.test.js"],
+  },
   plugins: [
     vue(),
     VitePWA({

@@ -2,145 +2,129 @@
 
 from fastapi import HTTPException
 
-TABLE_MAP = {
-    "trip": "trips",
-    "day": "days",
-    "activity": "activities",
-    "packing": "packing_items",
-}
+ENTITY_REGISTRY = [
+    {
+        "type": "trip",
+        "table": "trips",
+        "id_col": "id",
+        "parents": [],
+        "list_select": "id, title as name, deleted_at, 'trip' as type",
+        "list_from": "trips",
+        "list_where": "deleted_at IS NOT NULL",
+        "trip_filter_col": "id",
+    },
+    {
+        "type": "day",
+        "table": "days",
+        "id_col": "id",
+        "parents": [
+            {"fk": "trip_id", "parent_table": "trips", "parent_id_col": "id", "error": "请先恢复所属旅行"},
+        ],
+        "list_select": "d.id, (d.date || ' Day' || d.day_number) as name, d.deleted_at, 'day' as type, t.title as trip_title, d.trip_id",
+        "list_from": "days d JOIN trips t ON d.trip_id = t.id",
+        "list_where": "d.deleted_at IS NOT NULL",
+        "list_order": "d.deleted_at DESC",
+        "trip_filter_col": "d.trip_id",
+    },
+    {
+        "type": "activity",
+        "table": "activities",
+        "id_col": "id",
+        "parents": [
+            {"fk": "day_id", "parent_table": "days", "parent_id_col": "id", "error": "请先恢复所属天"},
+            {"fk_path_sql": "SELECT trip_id FROM days WHERE id = ?", "fk_path_args": ["day_id"], "parent_table": "trips", "parent_id_col": "id", "error": "请先恢复所属旅行"},
+        ],
+        "list_select": "a.id, a.name, a.deleted_at, 'activity' as type, d.date as day_date, d.day_number, d.trip_id, t.title as trip_title",
+        "list_from": "activities a JOIN days d ON a.day_id = d.id JOIN trips t ON d.trip_id = t.id",
+        "list_where": "a.deleted_at IS NOT NULL",
+        "list_order": "a.deleted_at DESC",
+        "trip_filter_col": "d.trip_id",
+    },
+    {
+        "type": "packing",
+        "table": "packing_items",
+        "id_col": "id",
+        "parents": [
+            {"fk": "trip_id", "parent_table": "trips", "parent_id_col": "id", "error": "请先恢复所属旅行"},
+        ],
+        "list_select": "p.id, p.name, p.deleted_at, 'packing' as type, t.title as trip_title, p.trip_id",
+        "list_from": "packing_items p JOIN trips t ON p.trip_id = t.id",
+        "list_where": "p.deleted_at IS NOT NULL",
+        "list_order": "p.deleted_at DESC",
+        "trip_filter_col": "p.trip_id",
+    },
+]
+
+_TYPE_TO_ENTRY = {e["type"]: e for e in ENTITY_REGISTRY}
 
 
 def list_deleted(db, trip_id: int | None = None) -> list[dict]:
     items = []
 
-    # 已删除的 trips
-    trip_where = "WHERE deleted_at IS NOT NULL"
-    trip_params: tuple = ()
-    if trip_id is not None:
-        trip_where += " AND id = ?"
-        trip_params = (trip_id,)
-    trips = db.execute(
-        f"""SELECT id, title as name, deleted_at, 'trip' as type
-            FROM trips {trip_where}
-            ORDER BY deleted_at DESC""",
-        trip_params,
-    ).fetchall()
-    items.extend(dict(t) for t in trips)
-
-    # 已删除的 days
-    day_where = "WHERE d.deleted_at IS NOT NULL"
-    day_params: tuple = ()
-    if trip_id is not None:
-        day_where += " AND d.trip_id = ?"
-        day_params = (trip_id,)
-    days = db.execute(
-        f"""SELECT d.id, (d.date || ' Day' || d.day_number) as name, d.deleted_at, 'day' as type,
-                   t.title as trip_title, d.trip_id
-            FROM days d
-            JOIN trips t ON d.trip_id = t.id
-            {day_where}
-            ORDER BY d.deleted_at DESC""",
-        day_params,
-    ).fetchall()
-    items.extend(dict(d) for d in days)
-
-    # 已删除的活动
-    act_where = "a.deleted_at IS NOT NULL"
-    act_params: tuple = ()
-    if trip_id is not None:
-        act_where += " AND d.trip_id = ?"
-        act_params = (trip_id,)
-    acts = db.execute(
-        f"""SELECT a.id, a.name, a.deleted_at, 'activity' as type,
-                   d.date as day_date, d.day_number, d.trip_id, t.title as trip_title
-            FROM activities a
-            JOIN days d ON a.day_id = d.id
-            JOIN trips t ON d.trip_id = t.id
-            WHERE {act_where}
-            ORDER BY a.deleted_at DESC""",
-        act_params,
-    ).fetchall()
-    items.extend(dict(a) for a in acts)
-
-    # 已删除的打包物品
-    pkg_where = "p.deleted_at IS NOT NULL"
-    pkg_params: tuple = ()
-    if trip_id is not None:
-        pkg_where += " AND p.trip_id = ?"
-        pkg_params = (trip_id,)
-    packings = db.execute(
-        f"""SELECT p.id, p.name, p.deleted_at, 'packing' as type,
-                   t.title as trip_title, p.trip_id
-            FROM packing_items p
-            JOIN trips t ON p.trip_id = t.id
-            WHERE {pkg_where}
-            ORDER BY p.deleted_at DESC""",
-        pkg_params,
-    ).fetchall()
-    items.extend(dict(p) for p in packings)
+    for entry in ENTITY_REGISTRY:
+        where = entry["list_where"]
+        params: tuple = ()
+        if trip_id is not None:
+            where += f" AND {entry['trip_filter_col']} = ?"
+            params = (trip_id,)
+        rows = db.execute(
+            f"""SELECT {entry['list_select']}
+                FROM {entry['list_from']}
+                WHERE {where}
+                ORDER BY {entry.get('list_order', 'deleted_at DESC')}""",
+            params,
+        ).fetchall()
+        items.extend(dict(r) for r in rows)
 
     items.sort(key=lambda x: x["deleted_at"] or "", reverse=True)
     return items
 
 
 def restore(db, item_type: str, item_id: int) -> bool:
-    table = TABLE_MAP.get(item_type)
-    if not table:
+    entry = _TYPE_TO_ENTRY.get(item_type)
+    if not entry:
         return False
 
     item = db.execute(
-        f"SELECT * FROM {table} WHERE id = ? AND deleted_at IS NOT NULL", (item_id,)
+        f"SELECT * FROM {entry['table']} WHERE {entry['id_col']} = ? AND deleted_at IS NOT NULL",
+        (item_id,),
     ).fetchone()
     if not item:
         return False
 
-    # parent 链校验
-    if item_type == "day":
-        trip = db.execute(
-            "SELECT id FROM trips WHERE id = ? AND deleted_at IS NOT NULL",
-            (item["trip_id"],),
-        ).fetchone()
-        if trip:
-            raise HTTPException(400, "请先恢复所属旅行")
+    for parent in entry["parents"]:
+        if "fk" in parent:
+            parent_id = item[parent["fk"]]
+        else:
+            row = db.execute(parent["fk_path_sql"], [item[a] for a in parent["fk_path_args"]]).fetchone()
+            if not row:
+                continue
+            parent_id = row[0]
 
-    elif item_type == "activity":
-        day = db.execute(
-            "SELECT id FROM days WHERE id = ? AND deleted_at IS NOT NULL",
-            (item["day_id"],),
+        deleted_parent = db.execute(
+            f"SELECT {parent['parent_id_col']} FROM {parent['parent_table']} WHERE {parent['parent_id_col']} = ? AND deleted_at IS NOT NULL",
+            (parent_id,),
         ).fetchone()
-        if day:
-            raise HTTPException(400, "请先恢复所属天")
-        trip = db.execute(
-            "SELECT id FROM trips WHERE id IN (SELECT trip_id FROM days WHERE id = ?) AND deleted_at IS NOT NULL",
-            (item["day_id"],),
-        ).fetchone()
-        if trip:
-            raise HTTPException(400, "请先恢复所属旅行")
+        if deleted_parent:
+            raise HTTPException(400, parent["error"])
 
-    elif item_type == "packing":
-        trip = db.execute(
-            "SELECT id FROM trips WHERE id = ? AND deleted_at IS NOT NULL",
-            (item["trip_id"],),
-        ).fetchone()
-        if trip:
-            raise HTTPException(400, "请先恢复所属旅行")
-
-    db.execute(f"UPDATE {table} SET deleted_at = NULL WHERE id = ?", (item_id,))
+    db.execute(f"UPDATE {entry['table']} SET deleted_at = NULL WHERE {entry['id_col']} = ?", (item_id,))
     db.commit()
     return True
 
 
 def permanent_delete(db, item_type: str, item_id: int) -> bool:
-    table = TABLE_MAP.get(item_type)
-    if not table:
+    entry = _TYPE_TO_ENTRY.get(item_type)
+    if not entry:
         return False
 
     item = db.execute(
-        f"SELECT id FROM {table} WHERE id = ? AND deleted_at IS NOT NULL", (item_id,)
+        f"SELECT {entry['id_col']} FROM {entry['table']} WHERE {entry['id_col']} = ? AND deleted_at IS NOT NULL",
+        (item_id,),
     ).fetchone()
     if not item:
         return False
 
-    db.execute(f"DELETE FROM {table} WHERE id = ?", (item_id,))
+    db.execute(f"DELETE FROM {entry['table']} WHERE {entry['id_col']} = ?", (item_id,))
     db.commit()
     return True

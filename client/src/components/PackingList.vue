@@ -56,7 +56,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
-import { api } from "../api/client.js";
+import * as packing from "../api/packing.js";
 import { useUser } from "../composables/useUser.js";
 import { useWebSocket } from "../composables/useWebSocket.js";
 
@@ -71,22 +71,22 @@ const checkedCount = computed(() => items.value.filter(i => i.checked).length);
 const progressPercent = computed(() => items.value.length ? Math.round((checkedCount.value / items.value.length) * 100) : 0);
 
 async function load() {
-  items.value = await api.get(`/trips/${tripId}/packing`);
+  items.value = await packing.list(tripId);
 }
 
 async function addItem() {
-  await api.post(`/trips/${tripId}/packing`, form.value);
+  await packing.create(tripId, form.value);
   form.value = { name: "", category: form.value.category, assignee: form.value.assignee };
   await load();
 }
 
 async function toggleCheck(item) {
-  await api.put(`/trips/${tripId}/packing/${item.id}/check`);
+  await packing.toggleCheck(tripId, item.id);
   await load();
 }
 
 async function deleteItem(item) {
-  await api.delete(`/trips/${tripId}/packing/${item.id}`);
+  await packing.remove(tripId, item.id);
   await load();
 }
 
