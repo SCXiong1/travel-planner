@@ -26,7 +26,6 @@
         @select="selectDay"
         @add="addDay"
         @delete="promptDeleteDay"
-        @reorder="reorderDays"
       />
 
       <!-- 右侧活动区 -->
@@ -221,11 +220,6 @@ async function confirmDeleteDay() {
     selectedDay.value = null;
     activities.value = [];
   }
-}
-
-async function reorderDays(orders) {
-  await daysApi.reorder(route.params.id, orders);
-  await loadTrip();
 }
 
 async function deleteActivity(actId) {
