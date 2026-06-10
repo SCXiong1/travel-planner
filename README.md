@@ -34,7 +34,7 @@
 
 | 层 | 技术 |
 |---|---|
-| 后端 | Python 3.12 + FastAPI + SQLite 3 |
+| 后端 | Python 3.12 + FastAPI + SQLite 3（uv 管理依赖） |
 | 前端 | Vue 3 + Vite + Tailwind CSS |
 | 实时同步 | WebSocket（FastAPI 原生） |
 | PWA | vite-plugin-pwa |
@@ -44,10 +44,14 @@
 
 ### 开发环境
 
+需要 [uv](https://docs.astral.sh/uv/)（Python 包管理器）和 Node.js。
+
 ```bash
 # 后端
 cd server
-pip install -r requirements.txt
+uv venv                              # 创建虚拟环境（Python 3.12）
+source .venv/bin/activate            # 激活 venv
+uv pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 3001 --reload
 
 # 前端
@@ -154,7 +158,7 @@ WS     /ws?trip_id=1&user=sd                 — 实时同步
 
 | 层 | 框架 | 测试数 | 运行方式 |
 |---|---|---|---|
-| 后端 | pytest | 74 | `cd server && $PYTHON -m pytest tests/` |
+| 后端 | pytest | 74 | `cd server && source .venv/bin/activate && python -m pytest tests/` |
 | 前端 | vitest | 18 | `cd client && npx vitest run` |
 
 ## 版本历史

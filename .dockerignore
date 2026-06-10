@@ -2,5 +2,9 @@ client/dist
 client/node_modules
 data
 .git
+.github
+.claude
 .scratch
+docs
+server/.venv
 **/__pycache__
