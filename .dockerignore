@@ -1,5 +1,6 @@
 client/dist
 client/node_modules
+client/e2e
 data
 .git
 .github
