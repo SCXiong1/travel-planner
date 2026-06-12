@@ -1,5 +1,5 @@
 <template>
-  <div class="p-3 pl-8">
+  <div class="p-3 pl-8" data-testid="activity-card">
     <div class="flex items-center gap-2 pr-6">
       <span :class="ACTIVITY_TYPE_BADGE[activity.type] || ''" class="text-xs px-2 py-0.5 rounded-full font-medium">
         {{ ACTIVITY_TYPE_LABEL[activity.type] || activity.type }}
@@ -23,6 +23,7 @@
     </div>
     <button
       @click.stop="$emit('delete', activity.id)"
+      data-testid="delete-activity-button"
       class="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition"
       title="删除活动"
     >&times;</button>

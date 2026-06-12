@@ -49,6 +49,7 @@
               >
                 <!-- 拖拽手柄 -->
                 <div v-if="activities.length >= 2"
+                  data-testid="activity-drag-handle"
                   class="absolute left-1 top-0 bottom-0 w-7 flex items-center justify-center text-gray-300 hover:text-gray-500 select-none"
                   :class="dragging && idx === dragIndex ? 'cursor-grabbing' : 'cursor-grab'"
                   style="touch-action: none;"
@@ -66,7 +67,7 @@
             ]" />
           </div>
 
-          <button @click="openCreateDialog"
+          <button @click="openCreateDialog" data-testid="add-activity-button"
             class="mt-4 w-full py-2.5 bg-blue-500 text-white rounded-xl text-sm font-medium hover:bg-blue-600 active:scale-[0.98] transition">
             + 添加活动
           </button>

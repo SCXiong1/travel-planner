@@ -4,6 +4,7 @@
       <div
         v-for="day in days"
         :key="day.id"
+        data-testid="day-item"
         @click="$emit('select', day.id)"
         :class="[
           'px-3 py-2 rounded-lg cursor-pointer text-sm transition flex-shrink-0 flex items-center justify-between gap-1',
@@ -24,7 +25,7 @@
         </ContextMenu>
       </div>
     </div>
-    <button @click="$emit('add')"
+    <button @click="$emit('add')" data-testid="add-day-button"
       class="mt-2 w-full py-2 text-sm text-blue-500 border border-dashed border-blue-300 rounded-lg hover:bg-blue-50 transition flex-shrink-0">
       + 添加天
     </button>
