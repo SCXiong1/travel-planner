@@ -7,11 +7,11 @@
       <div class="bg-white rounded-2xl p-6 shadow-sm space-y-4">
         <div class="flex justify-between text-sm">
           <span class="text-gray-500">sd 支付</span>
-          <span class="text-blue-600 font-medium">¥{{ data.sd_paid }}</span>
+          <span class="text-blue-600 font-medium" data-testid="sd-paid">¥{{ data.sd_paid }}</span>
         </div>
         <div class="flex justify-between text-sm">
           <span class="text-gray-500">sg 支付</span>
-          <span class="text-pink-500 font-medium">¥{{ data.sg_paid }}</span>
+          <span class="text-pink-500 font-medium" data-testid="sg-paid">¥{{ data.sg_paid }}</span>
         </div>
         <hr />
         <div class="flex justify-between text-base font-bold">
@@ -30,7 +30,7 @@
       </div>
 
       <!-- 结果 -->
-      <div class="mt-6 bg-white rounded-2xl p-6 shadow-sm text-center">
+      <div class="mt-6 bg-white rounded-2xl p-6 shadow-sm text-center" data-testid="settlement-result">
         <p v-if="data.sd_balance === 0 && data.sg_balance === 0" class="text-gray-400 text-lg">
           双方持平，无需补差价
         </p>

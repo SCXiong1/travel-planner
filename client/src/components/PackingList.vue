@@ -20,9 +20,9 @@
         还没有物品，点击下方添加
       </div>
       <div v-else class="space-y-1">
-        <div v-for="item in items" :key="item.id"
+        <div v-for="item in items" :key="item.id" data-testid="packing-item"
           class="bg-white rounded-lg p-3 border border-gray-100 flex items-center gap-3">
-          <input type="checkbox" :checked="item.checked" @change="toggleCheck(item)"
+          <input type="checkbox" :checked="item.checked" @change="toggleCheck(item)" data-testid="packing-checkbox"
             class="w-5 h-5 rounded border-gray-300 text-green-500 focus:ring-green-500" />
           <div class="flex-1">
             <div :class="['text-sm font-medium', item.checked ? 'text-gray-400 line-through' : 'text-gray-800']">
@@ -30,7 +30,7 @@
             </div>
             <div class="text-xs text-gray-400">{{ item.category }}</div>
           </div>
-          <span :class="item.assignee === 'sd' ? 'text-blue-500' : 'text-pink-500'" class="text-xs font-medium">
+          <span :class="item.assignee === 'sd' ? 'text-blue-500' : 'text-pink-500'" class="text-xs font-medium" data-testid="packing-assignee">
             {{ item.assignee }}
           </span>
           <button @click="deleteItem(item)" class="text-gray-300 hover:text-red-500 text-sm">&times;</button>
@@ -39,13 +39,13 @@
 
       <!-- 添加物品 -->
       <form @submit.prevent="addItem" class="mt-4 flex gap-2">
-        <input v-model="form.name" required placeholder="物品名称" class="flex-1 border rounded-lg px-3 py-2 text-sm text-gray-800" />
-        <input v-model="form.category" required placeholder="分类" class="w-24 border rounded-lg px-3 py-2 text-sm text-gray-800" />
-        <select v-model="form.assignee" class="w-16 border rounded-lg px-2 py-2 text-sm text-gray-800 bg-white">
+        <input v-model="form.name" required placeholder="物品名称" data-testid="packing-form-name" class="flex-1 border rounded-lg px-3 py-2 text-sm text-gray-800" />
+        <input v-model="form.category" required placeholder="分类" data-testid="packing-form-category" class="w-24 border rounded-lg px-3 py-2 text-sm text-gray-800" />
+        <select v-model="form.assignee" data-testid="packing-form-assignee" class="w-16 border rounded-lg px-2 py-2 text-sm text-gray-800 bg-white">
           <option value="sd">sd</option>
           <option value="sg">sg</option>
         </select>
-        <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition">
+        <button type="submit" data-testid="packing-form-submit" class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition">
           添加
         </button>
       </form>
