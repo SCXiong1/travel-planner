@@ -9,3 +9,4 @@ data
 docs
 server/.venv
 **/__pycache__
+**/test-results

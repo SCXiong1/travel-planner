@@ -4,13 +4,13 @@
 
 ## Acceptance criteria
 
-- [ ] Playwright 已安装，playwright.config.js 已配置
-- [ ] webServer 配置自动启动 uvicorn（port 3001）和 vite dev server，等待 ready 后开始测试
-- [ ] projects 配置包含 iPhone 14 和 Pixel 7 两个设备
-- [ ] fixtures 目录包含干净的 db 模板，beforeAll 复制到 data/travel.db，afterAll 还原
-- [ ] Login.vue 中选择身份的交互元素添加了 data-testid
-- [ ] login.spec.js 覆盖：选择 sd → 进入 /trips、选择 sg → 进入 /trips
-- [ ] `npx playwright test` 在两个设备上均通过
+- [x] Playwright 已安装，playwright.config.js 已配置
+- [x] webServer 配置自动启动 uvicorn（port 3001）和 vite dev server，等待 ready 后开始测试
+- [x] projects 配置包含 iPhone 14 和 Pixel 7 两个设备
+- [x] fixtures 目录包含干净的 db 模板，beforeAll 复制到 data/travel.db，afterAll 还原
+- [x] Login.vue 中选择身份的交互元素添加了 data-testid
+- [x] login.spec.js 覆盖：选择 sd → 进入 /trips、选择 sg → 进入 /trips
+- [x] `npx playwright test` 在两个设备上均通过
 
 ## Blocked by
 
