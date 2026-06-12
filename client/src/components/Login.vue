@@ -5,12 +5,14 @@
       <p class="text-gray-500 mb-8">选择你的身份</p>
       <div class="flex gap-4">
         <button
+          data-testid="login-sd"
           @click="login('sd')"
           class="px-10 py-4 bg-blue-500 text-white text-lg rounded-xl hover:bg-blue-600 active:scale-95 transition"
         >
           sd
         </button>
         <button
+          data-testid="login-sg"
           @click="login('sg')"
           class="px-10 py-4 bg-pink-400 text-white text-lg rounded-xl hover:bg-pink-500 active:scale-95 transition"
         >

@@ -15,6 +15,7 @@ node_modules/
 dist/
 
 # Playwright
+client/test-results/
 client/e2e/test-results/
 client/e2e/playwright-report/
 client/playwright/.cache/
