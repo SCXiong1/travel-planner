@@ -1,12 +1,8 @@
 import { test, expect } from "@playwright/test";
-import { setupDatabase, teardownDatabase } from "../fixtures/db.js";
+import { setupDatabase } from "../fixtures/db.js";
 
-test.beforeAll(() => {
-  setupDatabase();
-});
-
-test.afterAll(() => {
-  teardownDatabase();
+test.beforeAll(async () => {
+  await setupDatabase();
 });
 
 test.describe("登录页", () => {

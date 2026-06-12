@@ -23,7 +23,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "bash -c 'cd ../server && source .venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 3001'",
+      command: "bash -c 'cd ../server && source .venv/bin/activate && TESTING=1 uvicorn main:app --host 0.0.0.0 --port 3001'",
       port: 3001,
       reuseExistingServer: false,
     },

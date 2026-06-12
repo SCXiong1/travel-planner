@@ -45,15 +45,17 @@ def create_app() -> FastAPI:
     async def health():
         return {"status": "ok"}
 
-    @app.post("/api/test/reset")
-    async def test_reset():
-        """测试用：清空所有业务数据"""
-        tables = ["expense_items", "packing_items", "activities", "days", "trips"]
-        for table in tables:
-            conn.execute(f"DELETE FROM {table}")
-            conn.execute(f"DELETE FROM sqlite_sequence WHERE name='{table}'")
-        conn.commit()
-        return {"ok": True}
+    if os.getenv("TESTING") or os.getenv("DEBUG"):
+        @app.post("/api/test/reset")
+        async def test_reset(request: Request):
+            """测试用：清空所有业务数据"""
+            db = request.state.db
+            tables = ["expense_items", "packing_items", "activities", "days", "trips"]
+            for table in tables:
+                db.execute(f"DELETE FROM {table}")
+                db.execute(f"DELETE FROM sqlite_sequence WHERE name=?", (table,))
+            db.commit()
+            return {"ok": True}
 
     # WebSocket 端点
     @app.websocket("/ws")
