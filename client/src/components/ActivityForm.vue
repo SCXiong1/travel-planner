@@ -55,10 +55,10 @@
           <div v-for="(item, idx) in form.expense_items" :key="item._key"
             class="flex gap-2 mb-2 items-start">
             <div class="flex-1 min-w-0">
-              <input v-model.number="item.amount" type="number" step="0.01" placeholder="金额" data-testid="expense-amount"
+              <input v-model.number="item.amount" type="number" step="0.01" placeholder="金额" :data-testid="`expense-amount-${idx}`"
                 class="w-full border rounded-lg px-2 py-1.5 text-gray-800 text-sm" />
             </div>
-            <select v-model="item.payer" data-testid="expense-payer" class="w-14 border rounded-lg px-1 py-1.5 text-sm text-gray-800 bg-white flex-shrink-0">
+            <select v-model="item.payer" :data-testid="`expense-payer-${idx}`" class="w-14 border rounded-lg px-1 py-1.5 text-sm text-gray-800 bg-white flex-shrink-0">
               <option value="sd">sd</option>
               <option value="sg">sg</option>
             </select>

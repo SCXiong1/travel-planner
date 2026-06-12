@@ -47,7 +47,7 @@ test.describe("行程规划", () => {
     await expect(page.getByTestId("day-item")).toHaveCount(0);
   });
 
-  test("添加活动（四种类型）", async ({ page }) => {
+  test("添加活动", async ({ page }) => {
     // 先添加一天
     await page.getByTestId("add-day-button").click();
     await expect(page.getByTestId("day-item").first()).toContainText("Day 1");
@@ -61,6 +61,29 @@ test.describe("行程规划", () => {
     // 验证活动卡片出现
     await expect(page.getByTestId("activity-card")).toHaveCount(1);
     await expect(page.getByTestId("activity-card").first()).toContainText("拉面店");
+  });
+
+  test("添加四种类型的活动", async ({ page }) => {
+    // 先添加一天
+    await page.getByTestId("add-day-button").click();
+    await expect(page.getByTestId("day-item").first()).toContainText("Day 1");
+
+    const types = [
+      { type: "eat", name: "拉面店" },
+      { type: "stay", name: "温泉旅馆" },
+      { type: "transport", name: "新干线" },
+      { type: "sight", name: "浅草寺" },
+    ];
+
+    for (const { type, name } of types) {
+      await page.getByTestId("add-activity-button").click();
+      await page.getByTestId("activity-form-type").selectOption(type);
+      await page.getByTestId("activity-form-name").fill(name);
+      await page.getByTestId("activity-form-submit").click();
+    }
+
+    // 验证四个活动卡片都出现
+    await expect(page.getByTestId("activity-card")).toHaveCount(4);
   });
 
   test("编辑活动", async ({ page }) => {

@@ -33,7 +33,7 @@
           <span :class="item.assignee === 'sd' ? 'text-blue-500' : 'text-pink-500'" class="text-xs font-medium" data-testid="packing-assignee">
             {{ item.assignee }}
           </span>
-          <button @click="deleteItem(item)" class="text-gray-300 hover:text-red-500 text-sm">&times;</button>
+          <button @click="deleteItem(item)" data-testid="packing-delete-button" class="text-gray-300 hover:text-red-500 text-sm">&times;</button>
         </div>
       </div>
 

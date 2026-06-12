@@ -41,7 +41,7 @@ test.describe("回收站", () => {
     await expect(page.getByTestId("recycle-bin-item")).toHaveCount(0);
 
     // 关闭抽屉并刷新页面
-    await page.getByRole("button", { name: "×" }).click();
+    await page.getByTestId("drawer-close-button").click();
     await page.reload();
 
     // 验证旅行恢复

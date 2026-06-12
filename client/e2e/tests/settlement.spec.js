@@ -36,8 +36,8 @@ test.describe("费用结算", () => {
 
     // 添加一笔开销
     await page.getByRole("button", { name: "+ 添加一笔" }).click();
-    await page.getByTestId("expense-amount").fill("1000");
-    await page.getByTestId("expense-payer").selectOption("sd");
+    await page.getByTestId("expense-amount-0").fill("1000");
+    await page.getByTestId("expense-payer-0").selectOption("sd");
 
     await page.getByTestId("activity-form-submit").click();
     await expect(page.getByTestId("activity-card")).toHaveCount(1);
@@ -58,8 +58,8 @@ test.describe("费用结算", () => {
 
     // 添加一笔开销
     await page.getByRole("button", { name: "+ 添加一笔" }).click();
-    await page.getByTestId("expense-amount").fill("500");
-    await page.getByTestId("expense-payer").selectOption("sg");
+    await page.getByTestId("expense-amount-0").fill("500");
+    await page.getByTestId("expense-payer-0").selectOption("sg");
 
     await page.getByTestId("activity-form-submit").click();
     await expect(page.getByTestId("activity-card")).toHaveCount(1);
@@ -79,8 +79,8 @@ test.describe("费用结算", () => {
     await page.getByTestId("activity-form-name").fill("拉面店");
 
     await page.getByRole("button", { name: "+ 添加一笔" }).click();
-    await page.getByTestId("expense-amount").fill("1000");
-    await page.getByTestId("expense-payer").selectOption("sd");
+    await page.getByTestId("expense-amount-0").fill("1000");
+    await page.getByTestId("expense-payer-0").selectOption("sd");
 
     await page.getByTestId("activity-form-submit").click();
     await expect(page.getByTestId("activity-card")).toHaveCount(1);
@@ -89,7 +89,8 @@ test.describe("费用结算", () => {
     await page.getByRole("button", { name: "结算" }).click();
     await expect(page.getByRole("heading", { name: "结算" })).toBeVisible();
 
-    // 验证结算结果区域可见
-    await expect(page.getByTestId("settlement-result")).toBeVisible();
+    // 验证结算结果：sd 支付 1000，总开销 1000，sg 应承担 500
+    await expect(page.getByTestId("settlement-result")).toContainText("sg 需支付 sd");
+    await expect(page.getByTestId("settlement-result")).toContainText("500");
   });
 });
