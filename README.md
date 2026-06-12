@@ -160,11 +160,17 @@ WS     /ws?trip_id=1&user=sd                 — 实时同步
 |---|---|---|---|
 | 后端 | pytest | 74 | `cd server && source .venv/bin/activate && python -m pytest tests/` |
 | 前端单元 | vitest | 18 | `cd client && npx vitest run` |
-| 前端 E2E | Playwright | 12 | `cd client && npx playwright test` |
+| 前端 E2E | Playwright | 44 | `cd client && npx playwright test` |
 
-E2E 测试通过 Playwright 自动启动后端（`TESTING=1`）和前端 dev server。Playwright 配置了 iPhone 14 和 Pixel 7 两个移动设备，测试数据通过 `/api/test/reset` API 端点重置。
+E2E 测试通过 Playwright 自动启动后端（`TESTING=1`）和前端 dev server。Playwright 配置了 iPhone 14 和 Pixel 7 两个移动设备，测试数据通过 `/api/test/reset` API 端点重置。测试覆盖：登录、旅行列表 CRUD + 拖拽、行程规划（天管理 + 活动 CRUD + 拖拽）、打包清单、费用结算、回收站。
 
 ## 版本历史
+
+### v0.5.0 (2026-06-12) — E2E 测试全覆盖
+- Playwright E2E 测试从 12 个扩展到 44 个（22 个测试 × 2 个移动设备）
+- 新增测试：行程规划（天管理 + 活动 CRUD + 拖拽排序）、打包清单、费用结算、回收站
+- 7 个 Vue 组件添加 data-testid 属性
+- Code review 修复：动态 testid、断言精确化、类型覆盖扩展
 
 ### v0.4.0 (2026-05-26) — 架构深化：模块提取与消重
 - 客户端 API 服务层：6 个领域模块，组件不直接调 HTTP

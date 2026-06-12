@@ -4,12 +4,12 @@
 
 ## Acceptance criteria
 
-- [ ] DaySidebar.vue 中天列表项、添加天按钮、删除天按钮添加了 data-testid
-- [ ] ActivityCard.vue 中活动卡片、拖拽手柄、编辑按钮、删除按钮添加了 data-testid
-- [ ] ActivityForm.vue 中表单字段和提交按钮添加了 data-testid
-- [ ] trip-detail.spec.js 覆盖：添加天、删除天、添加活动（四种 type）、编辑活动、删除活动
-- [ ] 活动拖拽排序测试使用 touch 事件模拟
-- [ ] `npx playwright test tests/trip-detail.spec.js` 在两个设备上均通过
+- [x] DaySidebar.vue 中天列表项、添加天按钮、删除天按钮添加了 data-testid
+- [x] ActivityCard.vue 中活动卡片、拖拽手柄、编辑按钮、删除按钮添加了 data-testid
+- [x] ActivityForm.vue 中表单字段和提交按钮添加了 data-testid
+- [x] trip-detail.spec.js 覆盖：添加天、删除天、添加活动（四种 type）、编辑活动、删除活动
+- [x] 活动拖拽排序测试使用 touch 事件模拟
+- [x] `npx playwright test tests/trip-detail.spec.js` 在两个设备上均通过
 
 ## Blocked by
 
