@@ -15,10 +15,12 @@ node_modules/
 dist/
 
 # Playwright
+test-results/
 client/test-results/
 client/e2e/test-results/
 client/e2e/playwright-report/
 client/playwright/.cache/
+server/test-results/
 
 # Runtime data
 data/

@@ -1,6 +1,7 @@
 <template>
   <div ref="triggerRef" class="relative inline-flex">
     <button
+      data-testid="context-menu-button"
       @click.stop="toggle"
       class="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
     >

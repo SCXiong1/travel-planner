@@ -25,12 +25,12 @@ export default defineConfig({
     {
       command: "bash -c 'cd ../server && source .venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 3001'",
       port: 3001,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
     },
     {
       command: "npm run dev -- --host 0.0.0.0",
       port: 5173,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
     },
   ],
 });
