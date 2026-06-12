@@ -9,6 +9,7 @@
           class="flex-1 py-2 border rounded-xl text-gray-600 hover:bg-gray-50 transition"
         >取消</button>
         <button
+          data-testid="confirm-dialog-confirm"
           @click="$emit('confirm')"
           class="flex-1 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition"
         >{{ confirmText }}</button>

@@ -34,6 +34,7 @@
           ]" />
           <div
             :ref="el => setCardRef(idx, el)"
+            data-testid="trip-card"
             class="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition flex items-center"
             :class="{
               'cursor-pointer': !dragging,
@@ -44,6 +45,7 @@
             <!-- 拖拽手柄 -->
             <div
               v-if="trips.length >= 2"
+              data-testid="trip-drag-handle"
               class="w-9 flex items-center justify-center text-gray-300 hover:text-gray-500 select-none self-stretch rounded-l-xl"
               :class="dragging && idx === dragIndex ? 'cursor-grabbing bg-blue-50' : 'cursor-grab'"
               style="touch-action: none;"
@@ -57,10 +59,12 @@
             <ContextMenu @click.stop>
               <template #default="{ close: closeMenu }">
                 <button
+                  data-testid="edit-trip-button"
                   @click="openEditDialog(trip); closeMenu()"
                   class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 >编辑</button>
                 <button
+                  data-testid="delete-trip-button"
                   @click="promptDelete(trip); closeMenu()"
                   class="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-50"
                 >删除</button>
@@ -78,6 +82,7 @@
 
       <!-- 新建按钮 -->
       <button
+        data-testid="create-trip-button"
         @click="openCreateDialog"
         class="mt-6 w-full py-3 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 active:scale-[0.98] transition"
       >
@@ -92,20 +97,20 @@
         <form @submit.prevent="submit">
           <div class="mb-3">
             <label class="block text-sm font-medium text-gray-600 mb-1">标题</label>
-            <input v-model="form.title" required class="w-full border rounded-lg px-3 py-2 text-gray-800" />
+            <input data-testid="trip-form-title" v-model="form.title" required class="w-full border rounded-lg px-3 py-2 text-gray-800" />
           </div>
           <div class="mb-3">
             <label class="block text-sm font-medium text-gray-600 mb-1">目的地</label>
-            <input v-model="form.destination" required class="w-full border rounded-lg px-3 py-2 text-gray-800" />
+            <input data-testid="trip-form-destination" v-model="form.destination" required class="w-full border rounded-lg px-3 py-2 text-gray-800" />
           </div>
           <div class="flex flex-col sm:flex-row gap-3 mb-4">
             <div class="flex-1 min-w-0">
               <label class="block text-sm font-medium text-gray-600 mb-1">开始日期</label>
-              <input v-model="form.start_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-gray-800" />
+              <input data-testid="trip-form-start-date" v-model="form.start_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-gray-800" />
             </div>
             <div class="flex-1 min-w-0">
               <label class="block text-sm font-medium text-gray-600 mb-1">结束日期</label>
-              <input v-model="form.end_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-gray-800" />
+              <input data-testid="trip-form-end-date" v-model="form.end_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-gray-800" />
             </div>
           </div>
           <div class="flex gap-3">
@@ -114,6 +119,7 @@
               取消
             </button>
             <button type="submit"
+              data-testid="trip-form-submit"
               class="flex-1 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition">
               保存
             </button>

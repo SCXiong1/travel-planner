@@ -160,9 +160,9 @@ WS     /ws?trip_id=1&user=sd                 — 实时同步
 |---|---|---|---|
 | 后端 | pytest | 74 | `cd server && source .venv/bin/activate && python -m pytest tests/` |
 | 前端单元 | vitest | 18 | `cd client && npx vitest run` |
-| 前端 E2E | Playwright | — | `cd client && npx playwright test` |
+| 前端 E2E | Playwright | 12 | `cd client && npx playwright test` |
 
-E2E 测试需要后端运行中。Playwright 配置了 iPhone 14 和 Pixel 7 两个移动设备，测试数据通过 SQLite 文件复制/还原隔离。
+E2E 测试通过 Playwright 自动启动后端（`TESTING=1`）和前端 dev server。Playwright 配置了 iPhone 14 和 Pixel 7 两个移动设备，测试数据通过 `/api/test/reset` API 端点重置。
 
 ## 版本历史
 
