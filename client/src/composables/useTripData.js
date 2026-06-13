@@ -28,8 +28,12 @@ export function useTripData(tripId) {
   }
 
   async function selectDay(dayId) {
-    selectedDay.value = dayId;
-    activities.value = await activitiesApi.list(tripId, dayId);
+    try {
+      selectedDay.value = dayId;
+      activities.value = await activitiesApi.list(tripId, dayId);
+    } catch (e) {
+      toast(e.message || "加载活动失败", { type: "error" });
+    }
   }
 
   async function addDay() {
@@ -43,7 +47,9 @@ export function useTripData(tripId) {
     }
 
     const endDate = trip.value.end_date;
-    while (true) {
+    const MAX_ITERATIONS = 366;
+    let iterations = 0;
+    while (iterations++ < MAX_ITERATIONS) {
       const dateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}-${String(nextDate.getDate()).padStart(2, "0")}`;
 
       if (dateStr > endDate) {
@@ -74,11 +80,15 @@ export function useTripData(tripId) {
   }
 
   async function deleteDay(dayId) {
-    await daysApi.remove(tripId, dayId);
-    await loadAll();
-    if (selectedDay.value === dayId) {
-      selectedDay.value = null;
-      activities.value = [];
+    try {
+      await daysApi.remove(tripId, dayId);
+      await loadAll();
+      if (selectedDay.value === dayId) {
+        selectedDay.value = null;
+        activities.value = [];
+      }
+    } catch (e) {
+      toast(e.message || "删除失败", { type: "error" });
     }
   }
 
@@ -86,8 +96,10 @@ export function useTripData(tripId) {
     try {
       await activitiesApi.create(tripId, selectedDay.value, data);
       await selectDay(selectedDay.value);
+      return true;
     } catch (e) {
       toast(e.message || "操作失败", { type: "error" });
+      return false;
     }
   }
 
@@ -95,15 +107,21 @@ export function useTripData(tripId) {
     try {
       await activitiesApi.update(tripId, selectedDay.value, actId, data);
       await selectDay(selectedDay.value);
+      return true;
     } catch (e) {
       toast(e.message || "操作失败", { type: "error" });
+      return false;
     }
   }
 
   async function deleteActivity(actId) {
     if (!selectedDay.value) return;
-    await activitiesApi.remove(tripId, selectedDay.value, actId);
-    await selectDay(selectedDay.value);
+    try {
+      await activitiesApi.remove(tripId, selectedDay.value, actId);
+      await selectDay(selectedDay.value);
+    } catch (e) {
+      toast(e.message || "删除失败", { type: "error" });
+    }
   }
 
   return {

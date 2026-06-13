@@ -67,7 +67,11 @@ const checkedCount = computed(() => items.value.filter(i => i.checked).length);
 const progressPercent = computed(() => items.value.length ? Math.round((checkedCount.value / items.value.length) * 100) : 0);
 
 async function load() {
-  items.value = await packing.list(tripId);
+  try {
+    items.value = await packing.list(tripId);
+  } catch (e) {
+    toast(e.message || "加载失败", { type: "error" });
+  }
 }
 
 async function addItem() {
@@ -81,13 +85,21 @@ async function addItem() {
 }
 
 async function toggleCheck(item) {
-  await packing.toggleCheck(tripId, item.id);
-  await load();
+  try {
+    await packing.toggleCheck(tripId, item.id);
+    await load();
+  } catch (e) {
+    toast(e.message || "操作失败", { type: "error" });
+  }
 }
 
 async function deleteItem(item) {
-  await packing.remove(tripId, item.id);
-  await load();
+  try {
+    await packing.remove(tripId, item.id);
+    await load();
+  } catch (e) {
+    toast(e.message || "删除失败", { type: "error" });
+  }
 }
 
 useTripWebSocket(tripId, (msg) => {

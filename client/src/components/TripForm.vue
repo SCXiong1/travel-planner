@@ -44,11 +44,15 @@ const emit = defineEmits(["submit", "cancel"]);
 const defaultForm = { title: "", destination: "", start_date: "", end_date: "" };
 const form = reactive({ ...defaultForm });
 
+function pickFormFields(obj) {
+  return { title: obj.title || "", destination: obj.destination || "", start_date: obj.start_date || "", end_date: obj.end_date || "" };
+}
+
 watch(() => props.initial, (val) => {
-  Object.assign(form, val || defaultForm);
+  Object.assign(form, val ? pickFormFields(val) : { ...defaultForm });
 }, { immediate: true });
 
 function handleSubmit() {
-  emit("submit", { ...form });
+  emit("submit", pickFormFields(form));
 }
 </script>

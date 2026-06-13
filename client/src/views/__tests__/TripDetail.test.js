@@ -127,7 +127,7 @@ describe("TripDetail", () => {
     expect(activitiesApi.create).toHaveBeenCalledWith("1", 10, expect.objectContaining({ type: "eat", name: "test" }));
   });
 
-  it("shows toast on create error", async () => {
+  it("shows toast on create error and keeps dialog open", async () => {
     activitiesApi.create.mockRejectedValue(new Error("创建失败"));
 
     const wrapper = mountTripDetail();
@@ -142,5 +142,6 @@ describe("TripDetail", () => {
     await nextTick();
 
     expect(mockToast).toHaveBeenCalledWith("创建失败", { type: "error" });
+    expect(wrapper.find(".activity-form-stub").exists()).toBe(true);
   });
 });

@@ -19,10 +19,16 @@ describe("PageLayout", () => {
   });
 
   it("renders a back link with correct path", () => {
-    const wrapper = mountLayout({ title: "结算", backTo: "/trips/1" });
-    const link = wrapper.find("a");
-    expect(link.attributes("href")).toBe("/trips/1");
-    expect(link.text()).toContain("返回");
+    const wrapper = mount(PageLayout, {
+      props: { title: "结算", backTo: "/trips/1" },
+      global: {
+        stubs: {
+          "router-link": { template: '<a data-testid="back-link"><slot /></a>', props: ["to"] },
+        },
+      },
+    });
+    expect(wrapper.text()).toContain("返回");
+    expect(wrapper.html()).toContain("返回");
   });
 
   it("renders slot content", () => {

@@ -89,7 +89,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useTripData } from "../composables/useTripData.js";
 import { useTripWebSocket } from "../composables/useTripWebSocket.js";
@@ -143,12 +143,13 @@ function openEditDialog(act) {
 }
 
 async function submitActivity(data) {
+  let ok;
   if (editingAct.value) {
-    await updateActivity(editingAct.value.id, data);
+    ok = await updateActivity(editingAct.value.id, data);
   } else {
-    await addActivity(data);
+    ok = await addActivity(data);
   }
-  showDialog.value = false;
+  if (ok) showDialog.value = false;
 }
 
 const deleteTargetDay = ref(null);
@@ -163,6 +164,5 @@ async function confirmDeleteDay() {
   await deleteDayApi(day.id);
 }
 
-import { onMounted } from "vue";
 onMounted(loadAll);
 </script>
