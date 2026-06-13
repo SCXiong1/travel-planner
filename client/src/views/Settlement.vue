@@ -1,8 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 p-4">
-    <div class="max-w-md mx-auto">
-      <button @click="$router.push(`/trips/${tripId}`)" class="text-blue-500 text-sm mb-4 inline-block">&larr; 返回行程</button>
-      <h1 class="text-2xl font-bold text-gray-800 mb-6">结算</h1>
+  <PageLayout title="结算" :backTo="`/trips/${tripId}`">
 
       <div class="bg-white rounded-2xl p-6 shadow-sm space-y-4">
         <div class="flex justify-between text-sm">
@@ -43,14 +40,14 @@
           <p class="text-3xl font-bold text-pink-500 mt-1">¥{{ Math.abs(data.sd_balance) }}</p>
         </div>
       </div>
-    </div>
-  </div>
+  </PageLayout>
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { get as getSettlement } from "../api/settlement.js";
+import PageLayout from "../components/PageLayout.vue";
 
 const route = useRoute();
 const tripId = route.params.id;

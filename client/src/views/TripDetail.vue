@@ -89,30 +89,31 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from "vue";
+import { ref } from "vue";
 import { useRoute } from "vue-router";
-import * as trips from "../api/trips.js";
-import * as daysApi from "../api/days.js";
-import * as activitiesApi from "../api/activities.js";
+import { useTripData } from "../composables/useTripData.js";
+import { useTripWebSocket } from "../composables/useTripWebSocket.js";
 import { useDragReorder } from "../composables/useDragReorder.js";
-import { useUser } from "../composables/useUser.js";
-import { useWebSocket } from "../composables/useWebSocket.js";
-import { useToast } from "../composables/useToast.js";
-import ConfirmDialog from "./ConfirmDialog.vue";
-import ActivityCard from "./ActivityCard.vue";
-import ActivityForm from "./ActivityForm.vue";
-import DaySidebar from "./DaySidebar.vue";
+import * as activitiesApi from "../api/activities.js";
+import ConfirmDialog from "../components/ConfirmDialog.vue";
+import ActivityCard from "../components/ActivityCard.vue";
+import ActivityForm from "../components/ActivityForm.vue";
+import DaySidebar from "../components/DaySidebar.vue";
 
 const route = useRoute();
-const trip = ref({});
-const days = ref([]);
-const selectedDay = ref(null);
-const activities = ref([]);
-const showDialog = ref(false);
-const editingAct = ref(null);
-const { current: currentUser } = useUser();
-const ws = useWebSocket();
-const { show: toast } = useToast();
+const tripId = route.params.id;
+
+const {
+  trip, days, activities, selectedDay,
+  loadAll, selectDay, addDay, deleteDay: deleteDayApi,
+  addActivity, updateActivity, deleteActivity,
+} = useTripData(tripId);
+
+useTripWebSocket(tripId, (msg) => {
+  if (msg.type.startsWith("activity_") || msg.type === "activities_reordered") {
+    if (selectedDay.value) selectDay(selectedDay.value);
+  }
+});
 
 // ---- 拖拽排序 ----
 const {
@@ -121,13 +122,16 @@ const {
 } = useDragReorder({
   items: activities,
   onReorder: async (orders) => {
-    await activitiesApi.reorder(route.params.id, selectedDay.value, orders);
+    await activitiesApi.reorder(tripId, selectedDay.value, orders);
     await selectDay(selectedDay.value);
   },
   onClick: (act) => openEditDialog(act),
 });
 
 // ---- 表单 ----
+const showDialog = ref(false);
+const editingAct = ref(null);
+
 function openCreateDialog() {
   editingAct.value = null;
   showDialog.value = true;
@@ -139,71 +143,12 @@ function openEditDialog(act) {
 }
 
 async function submitActivity(data) {
-  try {
-    if (editingAct.value) {
-      await activitiesApi.update(route.params.id, selectedDay.value, editingAct.value.id, data);
-    } else {
-      await activitiesApi.create(route.params.id, selectedDay.value, data);
-    }
-    showDialog.value = false;
-    await selectDay(selectedDay.value);
-  } catch (e) {
-    toast(e.message || "操作失败", { type: "error" });
-  }
-}
-
-async function loadTrip() {
-  trip.value = await trips.get(route.params.id);
-  days.value = await daysApi.list(route.params.id);
-  if (days.value.length > 0 && !selectedDay.value) {
-    await selectDay(days.value[0].id);
-  }
-}
-
-async function selectDay(dayId) {
-  selectedDay.value = dayId;
-  activities.value = await activitiesApi.list(route.params.id, dayId);
-}
-
-async function addDay() {
-  let nextDate;
-  if (days.value.length > 0) {
-    const lastDate = days.value[days.value.length - 1].date;
-    nextDate = new Date(lastDate + 'T00:00:00');
-    nextDate.setDate(nextDate.getDate() + 1);
+  if (editingAct.value) {
+    await updateActivity(editingAct.value.id, data);
   } else {
-    nextDate = new Date(trip.value.start_date + 'T00:00:00');
+    await addActivity(data);
   }
-
-  const endDate = trip.value.end_date;
-  while (true) {
-    const dateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
-
-    if (dateStr > endDate) {
-      const start = new Date(trip.value.start_date + 'T00:00:00');
-      const end = new Date(trip.value.end_date + 'T00:00:00');
-      const totalDays = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
-      if (days.value.length < totalDays) {
-        toast('之前删过中间的天，有日期缺口，请从回收站恢复', { type: 'info' });
-      } else {
-        toast('已超过旅行结束日期，无法再添加天', { type: 'info' });
-      }
-      return;
-    }
-
-    try {
-      const r = await daysApi.create(route.params.id, { date: dateStr });
-      await loadTrip();
-      await selectDay(r.id);
-      return;
-    } catch (e) {
-      if (e.status === 409) {
-        nextDate.setDate(nextDate.getDate() + 1);
-        continue;
-      }
-      throw e;
-    }
-  }
+  showDialog.value = false;
 }
 
 const deleteTargetDay = ref(null);
@@ -215,37 +160,9 @@ function promptDeleteDay(day) {
 async function confirmDeleteDay() {
   const day = deleteTargetDay.value;
   deleteTargetDay.value = null;
-  await daysApi.remove(route.params.id, day.id);
-  await loadTrip();
-  if (selectedDay.value === day.id) {
-    selectedDay.value = null;
-    activities.value = [];
-  }
+  await deleteDayApi(day.id);
 }
 
-async function deleteActivity(actId) {
-  if (!selectedDay.value) return;
-  await activitiesApi.remove(route.params.id, selectedDay.value, actId);
-  await selectDay(selectedDay.value);
-}
-
-function onWsMessage(msg) {
-  if (msg.type.startsWith("activity_") || msg.type === "activities_reordered") {
-    if (selectedDay.value) selectDay(selectedDay.value);
-  }
-}
-
-onMounted(() => {
-  loadTrip();
-  ws.connect(route.params.id, currentUser.value, onWsMessage);
-});
-
-watch(currentUser, () => {
-  ws.disconnect();
-  ws.connect(route.params.id, currentUser.value, onWsMessage);
-});
-
-onUnmounted(() => {
-  ws.disconnect();
-});
+import { onMounted } from "vue";
+onMounted(loadAll);
 </script>

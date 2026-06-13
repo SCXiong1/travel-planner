@@ -94,37 +94,7 @@
     <div v-if="showDialog" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl" @click.stop>
         <h2 class="text-xl font-bold mb-4 text-gray-800">{{ editingTrip ? '编辑旅行' : '新建旅行' }}</h2>
-        <form @submit.prevent="submit">
-          <div class="mb-3">
-            <label class="block text-sm font-medium text-gray-600 mb-1">标题</label>
-            <input data-testid="trip-form-title" v-model="form.title" required class="w-full border rounded-lg px-3 py-2 text-gray-800" />
-          </div>
-          <div class="mb-3">
-            <label class="block text-sm font-medium text-gray-600 mb-1">目的地</label>
-            <input data-testid="trip-form-destination" v-model="form.destination" required class="w-full border rounded-lg px-3 py-2 text-gray-800" />
-          </div>
-          <div class="flex flex-col sm:flex-row gap-3 mb-4">
-            <div class="flex-1 min-w-0">
-              <label class="block text-sm font-medium text-gray-600 mb-1">开始日期</label>
-              <input data-testid="trip-form-start-date" v-model="form.start_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-gray-800" />
-            </div>
-            <div class="flex-1 min-w-0">
-              <label class="block text-sm font-medium text-gray-600 mb-1">结束日期</label>
-              <input data-testid="trip-form-end-date" v-model="form.end_date" type="date" required class="w-full border rounded-lg px-3 py-2 text-gray-800" />
-            </div>
-          </div>
-          <div class="flex gap-3">
-            <button type="button" @click="showDialog = false"
-              class="flex-1 py-2 border rounded-xl text-gray-600 hover:bg-gray-50 transition">
-              取消
-            </button>
-            <button type="submit"
-              data-testid="trip-form-submit"
-              class="flex-1 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition">
-              保存
-            </button>
-          </div>
-        </form>
+        <TripForm :initial="editingTrip || undefined" @submit="onFormSubmit" @cancel="showDialog = false" />
       </div>
     </div>
 
@@ -152,9 +122,10 @@ import { useUser } from "../composables/useUser.js";
 import { useToast } from "../composables/useToast.js";
 import * as tripsApi from "../api/trips.js";
 import { useDragReorder } from "../composables/useDragReorder.js";
-import ContextMenu from "./ContextMenu.vue";
-import ConfirmDialog from "./ConfirmDialog.vue";
-import RecycleBinDrawer from "./RecycleBinDrawer.vue";
+import ContextMenu from "../components/ContextMenu.vue";
+import ConfirmDialog from "../components/ConfirmDialog.vue";
+import RecycleBinDrawer from "../components/RecycleBinDrawer.vue";
+import TripForm from "../components/TripForm.vue";
 
 const { current: currentUser, switchUser } = useUser();
 const { show: toast } = useToast();
@@ -170,8 +141,6 @@ const showDialog = ref(false);
 const editingTrip = ref(null);
 const deleteTarget = ref(null);
 const showDrawer = ref(false);
-
-const form = ref({ title: "", destination: "", start_date: "", end_date: "" });
 
 // ---- 拖拽排序 ----
 const {
@@ -192,31 +161,24 @@ async function loadTrips() {
 
 function openCreateDialog() {
   editingTrip.value = null;
-  form.value = { title: "", destination: "", start_date: "", end_date: "" };
   showDialog.value = true;
 }
 
 function openEditDialog(trip) {
   editingTrip.value = trip;
-  form.value = {
-    title: trip.title,
-    destination: trip.destination,
-    start_date: trip.start_date,
-    end_date: trip.end_date,
-  };
   showDialog.value = true;
 }
 
-async function submit() {
-  if (form.value.start_date > form.value.end_date) {
+async function onFormSubmit(formData) {
+  if (formData.start_date > formData.end_date) {
     toast("开始日期不能晚于结束日期", { type: "error" });
     return;
   }
   try {
     if (editingTrip.value) {
-      await tripsApi.update(editingTrip.value.id, form.value);
+      await tripsApi.update(editingTrip.value.id, formData);
     } else {
-      await tripsApi.create(form.value);
+      await tripsApi.create(formData);
     }
     showDialog.value = false;
     await loadTrips();
