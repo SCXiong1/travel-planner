@@ -159,12 +159,20 @@ WS     /ws?trip_id=1&user=sd                 — 实时同步
 | 层 | 框架 | 测试数 | 运行方式 |
 |---|---|---|---|
 | 后端 | pytest | 74 | `cd server && source .venv/bin/activate && python -m pytest tests/` |
-| 前端单元 | vitest | 18 | `cd client && npx vitest run` |
-| 前端 E2E | Playwright | 44 | `cd client && npx playwright test` |
+| 前端单元 | vitest | 56 | `cd client && npx vitest run` |
+| 前端 E2E | Playwright | 48 | `cd client && npx playwright test` |
 
 E2E 测试通过 Playwright 自动启动后端（`TESTING=1`）和前端 dev server。Playwright 配置了 iPhone 14 和 Pixel 7 两个移动设备，测试数据通过 `/api/test/reset` API 端点重置。测试覆盖：登录、旅行列表 CRUD + 拖拽、行程规划（天管理 + 活动 CRUD + 拖拽）、打包清单、费用结算、回收站。
 
 ## 版本历史
+
+### v0.6.0 (2026-06-13) — 前端结构重构 + 测试同步
+- 前端目录分层：页面组件从 `components/` 移到 `views/`，共享组件留在 `components/`
+- 提取 TripForm.vue、PageLayout.vue 共享组件
+- 提取 useTripData.js、useTripWebSocket.js composable，TripDetail 和 PackingList 大幅精简
+- 后端 conftest.py 提取公共 fixture，清理 5 个测试文件重复样板
+- 前端单元测试从 18 扩展到 56 个（新增 composable + 组件测试）
+- E2E 测试新增 activity 级别回收站恢复和永久删除
 
 ### v0.5.0 (2026-06-12) — E2E 测试全覆盖
 - Playwright E2E 测试从 12 个扩展到 44 个（22 个测试 × 2 个移动设备）

@@ -5,32 +5,32 @@ const routes = [
   {
     path: "/login",
     name: "Login",
-    component: () => import("../components/Login.vue"),
+    component: () => import("../views/Login.vue"),
   },
   {
     path: "/trips",
     name: "TripList",
-    component: () => import("../components/TripList.vue"),
+    component: () => import("../views/TripList.vue"),
   },
   {
     path: "/trips/:id",
     name: "TripDetail",
-    component: () => import("../components/TripDetail.vue"),
+    component: () => import("../views/TripDetail.vue"),
   },
   {
     path: "/trips/:id/packing",
     name: "PackingList",
-    component: () => import("../components/PackingList.vue"),
+    component: () => import("../views/PackingList.vue"),
   },
   {
     path: "/trips/:id/settlement",
     name: "Settlement",
-    component: () => import("../components/Settlement.vue"),
+    component: () => import("../views/Settlement.vue"),
   },
   {
     path: "/trips/:id/recycle-bin",
     name: "RecycleBin",
-    component: () => import("../components/RecycleBin.vue"),
+    component: () => import("../views/RecycleBin.vue"),
   },
   {
     path: "/",

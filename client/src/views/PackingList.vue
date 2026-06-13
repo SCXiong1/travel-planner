@@ -1,8 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 p-4">
-    <div class="max-w-2xl mx-auto">
-      <button @click="$router.push(`/trips/${tripId}`)" class="text-blue-500 text-sm mb-4 inline-block">&larr; 返回行程</button>
-      <h1 class="text-2xl font-bold text-gray-800 mb-1">打包清单</h1>
+  <PageLayout title="打包清单" :backTo="`/trips/${tripId}`">
 
       <!-- 进度条 -->
       <div v-if="items.length > 0" class="mt-3 mb-4">
@@ -49,31 +46,32 @@
           添加
         </button>
       </form>
-    </div>
-  </div>
+  </PageLayout>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import * as packing from "../api/packing.js";
-import { useUser } from "../composables/useUser.js";
-import { useWebSocket } from "../composables/useWebSocket.js";
+import { useTripWebSocket } from "../composables/useTripWebSocket.js";
 import { useToast } from "../composables/useToast.js";
+import PageLayout from "../components/PageLayout.vue";
 
 const route = useRoute();
 const tripId = route.params.id;
 const items = ref([]);
 const form = ref({ name: "", category: "", assignee: "sd" });
-const { current: currentUser } = useUser();
-const ws = useWebSocket();
 const { show: toast } = useToast();
 
 const checkedCount = computed(() => items.value.filter(i => i.checked).length);
 const progressPercent = computed(() => items.value.length ? Math.round((checkedCount.value / items.value.length) * 100) : 0);
 
 async function load() {
-  items.value = await packing.list(tripId);
+  try {
+    items.value = await packing.list(tripId);
+  } catch (e) {
+    toast(e.message || "加载失败", { type: "error" });
+  }
 }
 
 async function addItem() {
@@ -87,30 +85,26 @@ async function addItem() {
 }
 
 async function toggleCheck(item) {
-  await packing.toggleCheck(tripId, item.id);
-  await load();
+  try {
+    await packing.toggleCheck(tripId, item.id);
+    await load();
+  } catch (e) {
+    toast(e.message || "操作失败", { type: "error" });
+  }
 }
 
 async function deleteItem(item) {
-  await packing.remove(tripId, item.id);
-  await load();
+  try {
+    await packing.remove(tripId, item.id);
+    await load();
+  } catch (e) {
+    toast(e.message || "删除失败", { type: "error" });
+  }
 }
 
-function onWsMessage(msg) {
+useTripWebSocket(tripId, (msg) => {
   if (msg.type.startsWith("packing_")) load();
-}
-
-onMounted(() => {
-  load();
-  ws.connect(tripId, currentUser.value, onWsMessage);
 });
 
-watch(currentUser, () => {
-  ws.disconnect();
-  ws.connect(tripId, currentUser.value, onWsMessage);
-});
-
-onUnmounted(() => {
-  ws.disconnect();
-});
+onMounted(load);
 </script>

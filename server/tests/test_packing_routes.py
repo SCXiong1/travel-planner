@@ -1,52 +1,14 @@
 """测试打包清单 API"""
 
-import sqlite3
 import pytest
-from httpx import ASGITransport, AsyncClient
-from fastapi import FastAPI, Request
 
-from db.schema import init_db
-from middleware.user import UserMiddleware
-from ws.manager import ConnectionManager
 from routes.trips import router as trip_router
 from routes.packing import router as packing_router
 
 
-def create_test_app(db_conn: sqlite3.Connection) -> FastAPI:
-    app = FastAPI()
-    app.add_middleware(UserMiddleware)
-    app.state.ws_manager = ConnectionManager()
-
-    @app.middleware("http")
-    async def db_middleware(request: Request, call_next):
-        request.state.db = db_conn
-        return await call_next(request)
-
-    app.include_router(trip_router)
-    app.include_router(packing_router)
-    return app
-
-
 @pytest.fixture
-def db():
-    conn = sqlite3.connect(":memory:")
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys=ON")
-    init_db(conn)
-    yield conn
-    conn.close()
-
-
-@pytest.fixture
-def app(db):
-    return create_test_app(db)
-
-
-@pytest.fixture
-async def client(app):
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as c:
-        yield c
+def app(create_app):
+    return create_app(trip_router, packing_router)
 
 
 def auth(user="sd"):
